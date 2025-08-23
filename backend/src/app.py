@@ -379,10 +379,13 @@ def reset_all_data():
     })
 
 if __name__ == '__main__':
-    print(f"🚀 Iron Condor Trading API starting...")
+    import os
+    port = int(os.environ.get('PORT', 5001))
+    
+    print(f"🚀 Iron Condor Trading API starting on port {port}...")
     print(f"📊 Market data integration: {'✅ Active' if yf else '❌ Unavailable'}")
     print(f"🤖 Browser automation: {'✅ Available' if async_playwright else '❌ Simulation only'}")
     print(f"🔗 CORS enabled for frontend integration")
     print(f"⚡ Ready for Webull connection testing")
     
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
