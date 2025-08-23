@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button.jsx'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
-import { Badge } from '@/components/ui/badge.jsx'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
-import { Input } from '@/components/ui/input.jsx'
-import { Label } from '@/components/ui/label.jsx'
-import { AlertCircle, TrendingUp, Activity, Play, Loader2, RefreshCw, Plus, X, Globe } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import mockApi from './services/mockApi.js'
+import WelcomeScreen from './components/WelcomeScreen.jsx'
+import BeginnerDashboard from './components/BeginnerDashboard.jsx'
+import IntermediateDashboard from './components/IntermediateDashboard.jsx'
+import ExpertDashboard from './components/ExpertDashboard.jsx'
 import './App.css'
 
 // Detect if we're in development (sandbox) or production
@@ -24,6 +22,12 @@ console.log('Environment:', isDevelopment ? 'Development (Sandbox)' : 'Productio
 console.log('API Base URL:', API_BASE || 'Mock API Service')
 
 function App() {
+  // User level and app state
+  const [userLevel, setUserLevel] = useState(() => {
+    return localStorage.getItem('iron-condor-user-level') || null
+  })
+  
+  // Core app state
   const [loading, setLoading] = useState(false)
   const [vixData, setVixData] = useState(null)
   const [webullStatus, setWebullStatus] = useState(null)
@@ -35,6 +39,18 @@ function App() {
   const showMessage = (msg, isError = false) => {
     setMessage(msg)
     setTimeout(() => setMessage(''), 5000)
+  }
+
+  // Save user level to localStorage
+  const handleSelectLevel = (level) => {
+    setUserLevel(level)
+    localStorage.setItem('iron-condor-user-level', level)
+  }
+
+  // Handle back to level selection
+  const handleBackToLevelSelection = () => {
+    setUserLevel(null)
+    localStorage.removeItem('iron-condor-user-level')
   }
 
   // API call wrapper - uses mock API in production, real API in development
@@ -154,19 +170,20 @@ function App() {
   }
 
   // Create Iron Condor position
-  const createPosition = async () => {
+  const createPosition = async (symbol) => {
+    const symbolToUse = symbol || newSymbol
     setLoading(true)
     try {
       const data = await apiCall('/positions/iron-condor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: newSymbol })
+        body: JSON.stringify({ symbol: symbolToUse })
       })
       
       if (data.success) {
-        showMessage(`Iron Condor created for ${newSymbol}!`)
+        showMessage(`Iron Condor created for ${symbolToUse}!`)
         fetchPositions()
-        setNewSymbol('SPY')
+        if (!symbol) setNewSymbol('SPY') // Only reset if not called with specific symbol
       } else {
         showMessage(data.error || 'Failed to create position', true)
       }
@@ -250,36 +267,64 @@ function App() {
     }
   }
 
-  // Initialize data on component mount
+  // Initialize data on component mount (only if user level is selected)
   useEffect(() => {
-    fetchVixData()
-    fetchWebullStatus()
-    fetchPositions()
-  }, [])
+    if (userLevel) {
+      fetchVixData()
+      fetchWebullStatus()
+      fetchPositions()
+    }
+  }, [userLevel])
+
+  // Show welcome screen if no user level selected
+  if (!userLevel) {
+    return (
+      <WelcomeScreen 
+        onSelectLevel={handleSelectLevel}
+        isDevelopment={isDevelopment}
+      />
+    )
+  }
+
+  // Common props for all dashboards
+  const commonProps = {
+    onBack: handleBackToLevelSelection,
+    vixData,
+    webullStatus,
+    positions,
+    loading,
+    initializeWebull,
+    testWebullLogin,
+    createPosition,
+    closePosition,
+    createDemoData,
+    resetData,
+    fetchVixData,
+    fetchWebullStatus,
+    fetchPositions,
+    newSymbol,
+    setNewSymbol,
+    showMessage
+  }
+
+  // Render appropriate dashboard based on user level
+  const renderDashboard = () => {
+    switch (userLevel) {
+      case 'beginner':
+        return <BeginnerDashboard {...commonProps} />
+      case 'intermediate':
+        return <IntermediateDashboard {...commonProps} />
+      case 'expert':
+        return <ExpertDashboard {...commonProps} />
+      default:
+        return <BeginnerDashboard {...commonProps} />
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
-      <div className="container mx-auto p-6 max-w-6xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Iron Condor Trader
-          </h1>
-          <p className="text-slate-600">Webull Integration & Options Trading Simulation</p>
-          
-          {/* Environment indicator */}
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <Globe className="h-4 w-4" />
-            <Badge variant={isDevelopment ? "default" : "secondary"}>
-              {isDevelopment ? "Development Mode" : "Demo Mode"}
-            </Badge>
-            <span className="text-sm text-slate-500">
-              {isDevelopment ? "Full API Integration" : "Standalone Demo"}
-            </span>
-          </div>
-        </div>
-
-        {/* Message Display */}
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Global Message Display */}
         {message && (
           <div className={`mb-6 p-4 rounded-lg border ${
             message.includes('Error') || message.includes('Failed') 
@@ -293,349 +338,8 @@ function App() {
           </div>
         )}
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-                Market Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {vixData ? (
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-slate-900">
-                    VIX: {vixData.vix}
-                  </div>
-                  <Badge variant={vixData.condition_met ? "default" : "secondary"}>
-                    {vixData.condition_met ? "Good Conditions" : "Wait"}
-                  </Badge>
-                  <p className="text-sm text-slate-600">{vixData.message}</p>
-                </div>
-              ) : (
-                <div className="text-slate-500">Loading market data...</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
-                Webull Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {webullStatus ? (
-                <div className="space-y-2">
-                  <Badge variant={webullStatus.is_running ? "default" : "secondary"}>
-                    {webullStatus.is_running ? "Connected" : "Disconnected"}
-                  </Badge>
-                  <p className="text-sm text-slate-600">
-                    Automation: {webullStatus.has_automation ? "Ready" : "Not Ready"}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Positions: {webullStatus.positions_count || 0}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-slate-500">Loading status...</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Play className="h-5 w-5 text-purple-600" />
-                Positions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-slate-900">
-                  {positions.length}
-                </div>
-                <p className="text-sm text-slate-600">
-                  Active Iron Condors
-                </p>
-                {positions.length > 0 && (
-                  <div className="text-sm">
-                    <span className="text-green-600">
-                      Total P&L: ${positions.reduce((sum, pos) => sum + (pos.pnl || 0), 0).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="trading" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="trading">Trading</TabsTrigger>
-            <TabsTrigger value="positions">Positions</TabsTrigger>
-            <TabsTrigger value="testing">Testing</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="trading" className="space-y-6">
-            {/* Webull Connection */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Webull Connection</CardTitle>
-                <CardDescription>
-                  {isDevelopment 
-                    ? "Initialize and test your Webull browser automation"
-                    : "Demo mode - simulates Webull connection for testing"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <Button 
-                    onClick={initializeWebull}
-                    disabled={loading}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Initialize Webull
-                  </Button>
-                  
-                  <Button 
-                    onClick={testWebullLogin}
-                    disabled={loading || !webullStatus?.is_running}
-                    variant="outline"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Test Login
-                  </Button>
-                  
-                  <Button 
-                    onClick={() => { fetchVixData(); fetchWebullStatus(); fetchPositions(); }}
-                    disabled={loading}
-                    variant="outline"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh Data
-                  </Button>
-                </div>
-
-                {webullStatus?.is_running && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">
-                      ✅ Webull automation is ready{!isDevelopment ? ' (Demo Mode)' : ''}!
-                    </p>
-                    <p className="text-green-700 text-sm">
-                      You can now create Iron Condor positions and test trading functionality.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Create Position */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Create Iron Condor Position</CardTitle>
-                <CardDescription>
-                  Enter a symbol to create a new Iron Condor position
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Label htmlFor="symbol">Symbol</Label>
-                    <Input
-                      id="symbol"
-                      value={newSymbol}
-                      onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                      placeholder="SPY"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button 
-                      onClick={createPosition}
-                      disabled={loading || !webullStatus?.is_running || !newSymbol}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                      Create Position
-                    </Button>
-                  </div>
-                </div>
-                
-                {!webullStatus?.is_running && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-amber-800 text-sm">
-                      ⚠️ Please initialize Webull connection first
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="positions" className="space-y-6">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Active Positions</CardTitle>
-                <CardDescription>
-                  Manage your Iron Condor positions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {positions.length > 0 ? (
-                  <div className="space-y-4">
-                    {positions.map((position) => (
-                      <div key={position.id} className="border border-slate-200 rounded-lg p-4 space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold text-lg">{position.symbol} Iron Condor</h4>
-                            <p className="text-sm text-slate-600">
-                              Opened: {new Date(position.opened_at).toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={position.status === 'open' ? "default" : "secondary"}>
-                              {position.status}
-                            </Badge>
-                            {position.status === 'open' && (
-                              <Button 
-                                onClick={() => closePosition(position.id)}
-                                disabled={loading}
-                                size="sm"
-                                variant="outline"
-                              >
-                                {loading ? <Loader2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-slate-600">Underlying Price</p>
-                            <p className="font-semibold">${position.underlying_price}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-600">Premium Collected</p>
-                            <p className="font-semibold text-green-600">${position.premium_collected}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-600">Max Profit</p>
-                            <p className="font-semibold text-green-600">${position.max_profit}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-600">Max Loss</p>
-                            <p className="font-semibold text-red-600">${position.max_loss}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-2 rounded">
-                          <div className="text-center">
-                            <p className="text-slate-600">Put Long</p>
-                            <p className="font-mono">${position.strikes.put_long}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Put Short</p>
-                            <p className="font-mono">${position.strikes.put_short}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Call Short</p>
-                            <p className="font-mono">${position.strikes.call_short}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Call Long</p>
-                            <p className="font-mono">${position.strikes.call_long}</p>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="text-slate-600 text-sm">Days to Expiration: {position.days_to_expiration}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-slate-400 mb-4">
-                      <Play className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      No active positions
-                    </div>
-                    <p className="text-slate-600">Create your first Iron Condor position to get started.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="testing" className="space-y-6">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Testing & Demo</CardTitle>
-                <CardDescription>
-                  Test the application with demo data and reset functionality
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <Button 
-                    onClick={createDemoData}
-                    disabled={loading}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Create Demo Data
-                  </Button>
-                  
-                  <Button 
-                    onClick={resetData}
-                    disabled={loading}
-                    variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-50"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Reset All Data
-                  </Button>
-                </div>
-
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2">Demo Data Information</h4>
-                  <ul className="text-blue-800 text-sm space-y-1">
-                    <li>• Creates sample Iron Condor positions for SPY, QQQ, and IWM</li>
-                    <li>• Initializes Webull connection simulation</li>
-                    <li>• {isDevelopment ? "Fetches live VIX data for realistic conditions" : "Provides simulated market data"}</li>
-                    <li>• All trading is simulated - no real money involved</li>
-                  </ul>
-                </div>
-
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <h4 className="font-semibold text-amber-900 mb-2">Safety Features</h4>
-                  <ul className="text-amber-800 text-sm space-y-1">
-                    <li>• All positions are simulated for demonstration</li>
-                    <li>• {isDevelopment ? "Webull integration is browser automation only" : "Webull integration is fully simulated"}</li>
-                    <li>• No real trading API connections</li>
-                    <li>• Reset function clears all demo data</li>
-                  </ul>
-                </div>
-
-                {!isDevelopment && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">Standalone Demo Mode</h4>
-                    <p className="text-green-800 text-sm">
-                      This app is running in standalone mode with a built-in mock API. 
-                      All data is stored locally in your browser and all functionality is fully simulated.
-                      Perfect for testing and demonstration without requiring a backend server.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Render Dashboard */}
+        {renderDashboard()}
       </div>
     </div>
   )
