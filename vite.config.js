@@ -11,4 +11,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: '0.0.0.0',
+    port: 5174,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      '.e2b.dev',
+      '5173-inh6ijg9scxc9xs6d4pul-6532622b.e2b.dev',
+      '5174-inh6ijg9scxc9xs6d4pul-6532622b.e2b.dev'
+    ],
+    hmr: {
+      port: 5174
+    }
+  }
 })
