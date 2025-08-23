@@ -10,7 +10,8 @@ import mockApi from './services/mockApi.js'
 import './App.css'
 
 // Detect if we're in development (sandbox) or production
-const isDevelopment = window.location.hostname.includes('e2b.dev') || window.location.hostname === 'localhost'
+// Force production mode for built version, development mode only for dev server
+const isDevelopment = import.meta.env.DEV && (window.location.hostname.includes('e2b.dev') || window.location.hostname === 'localhost')
 
 // API configuration
 const API_BASE = isDevelopment 
