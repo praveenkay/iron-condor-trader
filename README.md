@@ -1,268 +1,244 @@
-# Iron Condor Trader - 0DTE Trading Bot
+# 🚀 Iron Condor Trader
 
-A comprehensive web application for automating 0DTE (Zero Days to Expiration) Iron Condor trading strategies with Webull integration and real-time VIX monitoring.
+A modern, responsive web application for Iron Condor options trading with Webull integration and comprehensive trading simulation capabilities.
 
-![Iron Condor Trader Interface](screenshots/dashboard.png)
+## ✨ Live Demo
 
-## 🚀 Features
+**🌐 Access the app**: [https://praveenkay.github.io/iron-condor-trader/](https://praveenkay.github.io/iron-condor-trader/)
 
-- **Real-time VIX Monitoring**: Live data from Yahoo Finance with condition checking
-- **Automated Trading Logic**: Smart entry/exit rules based on VIX conditions
-- **Webull Integration**: Browser automation for seamless trade execution
-- **Professional Interface**: Modern React dashboard with real-time updates
-- **Position Management**: Live P&L tracking and automated position closure
-- **Configurable Parameters**: Customizable profit targets, time limits, and delta targets
-- **Trade History**: Complete performance tracking and analytics
-- **Safety Features**: Manual login requirements and comprehensive error handling
+## 🎯 Features
 
-## 📋 Strategy Overview
+### 🏷️ Core Trading Features
+- **Iron Condor Position Management** - Create, monitor, and close Iron Condor options positions
+- **Real-time Market Data** - Live VIX data integration for optimal trading conditions
+- **Webull Integration** - Browser automation for seamless trading platform connection
+- **Position Analytics** - Detailed P&L tracking, strike analysis, and risk management
 
-The application implements a disciplined 0DTE Iron Condor strategy:
+### 🎨 User Experience  
+- **Clean, Minimalist Design** - Modern UI with light theme and intuitive navigation
+- **Responsive Layout** - Works perfectly on desktop, tablet, and mobile devices
+- **Real-time Updates** - Live data refresh and position monitoring
+- **Interactive Dashboard** - Three-tab interface (Trading, Positions, Testing)
 
-### Entry Conditions
-- ✅ VIX must be higher than previous day's close
-- ✅ Market open at 9:30 AM ET
-- ✅ 20 Delta strikes for calls and puts
-- ✅ Automated Iron Condor setup with protective wings
+### 🔧 Technical Features
+- **Dual Mode Operation** - Development mode with real API, Production mode with mock API
+- **Local Data Persistence** - Browser-based storage for demo mode
+- **Comprehensive Testing** - Built-in demo data and reset functionality
+- **Safety First** - All trading is simulated, no real money at risk
 
-### Exit Conditions
-- 🎯 25% profit target (configurable)
-- ⏰ 120-minute time limit (configurable)
-- 🔄 Automatic position closure
+## 🚀 Quick Start
 
-## 🛠️ Technology Stack
+### Option 1: Use the Live Demo
+Simply visit [https://praveenkay.github.io/iron-condor-trader/](https://praveenkay.github.io/iron-condor-trader/) and start using the app immediately!
 
-### Frontend
-- **React 18** with modern hooks
-- **Tailwind CSS** for styling
-- **shadcn/ui** components
-- **Lucide React** icons
-- **Vite** for build tooling
+### Option 2: Run Locally
+```bash
+# Clone the repository
+git clone https://github.com/praveenkay/iron-condor-trader.git
+cd iron-condor-trader
 
-### Backend
-- **Flask** web framework
-- **Playwright** for browser automation
-- **yfinance** for market data
-- **SQLite** for data persistence
-- **Flask-CORS** for API integration
+# Install dependencies
+npm install --legacy-peer-deps
 
-## 📦 Installation
-
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- A Webull trading account
-- Basic understanding of options trading
-
-### Quick Start
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd iron-condor-trader
-   ```
-
-2. **Backend Setup:**
-   ```bash
-   cd iron_condor_backend
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
-
-3. **Frontend Setup:**
-   ```bash
-   cd ../iron-condor-trader
-   npm install
-   ```
-
-4. **Start the Application:**
-   ```bash
-   # Terminal 1: Backend
-   cd iron_condor_backend
-   source venv/bin/activate
-   python src/main.py
-
-   # Terminal 2: Frontend
-   cd iron-condor-trader
-   npm run dev
-   ```
-
-5. **Access the App:**
-   Open `http://localhost:5173` in your browser
-
-## 🎯 Usage Guide
-
-### 1. Initialize Webull Connection
-- Click "Initialize Webull" to open browser automation
-- Manually log in to your Webull account (for security)
-- System will detect successful login automatically
-
-### 2. Configure Trading Parameters
-- Navigate to Settings tab
-- Adjust profit target, time limit, delta target
-- Enable/disable auto trading mode
-- Save configuration
-
-### 3. Monitor Market Conditions
-- VIX status shows real-time condition checking
-- Market time displays current Eastern Time
-- Bot status indicates connection and activity
-
-### 4. Execute Trades
-- Start trading when VIX conditions are met
-- Monitor positions in real-time
-- Review performance in trade history
-
-## 📊 API Endpoints
-
-### Market Data
-- `GET /api/vix` - Current VIX data and conditions
-- `GET /api/market-status` - Market session information
-
-### Trading
-- `GET /api/trading/status` - Bot status and configuration
-- `POST /api/trading/start` - Start automated trading
-- `POST /api/trading/stop` - Stop trading and close positions
-- `GET /api/trading/positions` - Current active positions
-- `GET /api/trading/history` - Trade history
-
-### Webull Integration
-- `POST /api/webull/initialize` - Initialize browser automation
-- `GET /api/webull/status` - Connection status
-- `POST /api/webull/execute-trade` - Execute Iron Condor trade
-
-## ⚠️ Important Disclaimers
-
-### Risk Warning
-- **This application executes real trades with real money**
-- **Options trading involves substantial risk of loss**
-- **Always test with paper trading first**
-- **Past performance does not guarantee future results**
-
-### Security Notes
-- Manual Webull login required for security
-- Never share trading credentials
-- Monitor account activity regularly
-- Log out when finished trading
-
-### Technical Limitations
-- Browser automation may break with Webull UI changes
-- Requires stable internet connection
-- Designed for educational/research purposes
-- Not financial advice
-
-## 🏗️ Project Structure
-
+# Start development server
+npm run dev
 ```
-iron-condor-trader/
-├── iron-condor-trader/          # React frontend
-│   ├── src/
-│   │   ├── components/ui/       # UI components
-│   │   ├── App.jsx             # Main application
-│   │   └── main.jsx            # Entry point
-│   ├── dist/                   # Production build
-│   └── package.json
-├── iron_condor_backend/         # Flask backend
-│   ├── src/
-│   │   ├── routes/             # API endpoints
-│   │   ├── models/             # Database models
-│   │   ├── webull_automation.py # Browser automation
-│   │   └── main.py             # Flask app
-│   ├── venv/                   # Python virtual environment
-│   └── requirements.txt
-├── USER_INSTRUCTIONS.md         # Detailed user guide
-└── README.md                   # This file
+
+Visit `http://localhost:5173` in your browser.
+
+## 🎮 How to Use
+
+### 1. **Initialize Connection**
+- Click "Initialize Webull" to set up browser automation
+- In demo mode, this simulates the connection process
+
+### 2. **Test Login** 
+- Click "Test Login" to verify Webull connection
+- Simulates authentication process with realistic responses
+
+### 3. **Create Positions**
+- Enter a stock symbol (e.g., SPY, QQQ, AAPL)
+- Click "Create Position" to generate an Iron Condor
+- View detailed strike prices and profit/loss calculations
+
+### 4. **Monitor Portfolio**
+- Switch to "Positions" tab to view all active positions
+- See real-time P&L and position details
+- Close positions with simulated market prices
+
+### 5. **Demo & Testing**
+- Use "Create Demo Data" for sample positions
+- "Reset All Data" to clear everything and start fresh
+
+## 🏗️ Architecture
+
+### Frontend Stack
+- **React 19** - Modern UI library with hooks and context
+- **Vite** - Lightning-fast build tool and development server
+- **Tailwind CSS** - Utility-first CSS framework
+- **shadcn/ui** - Beautiful, accessible component library
+- **Lucide React** - Modern icon library
+
+### Backend Integration
+- **Development Mode** - Full Flask API with real market data integration
+- **Production Mode** - Built-in mock API service for standalone operation
+- **Dual API System** - Seamless switching between real and simulated data
+
+### Key Components
+```
+src/
+├── components/ui/          # shadcn/ui component library
+├── services/
+│   └── mockApi.js         # Standalone mock API service
+├── App.jsx                # Main application component
+├── App.css                # Custom styling and design
+└── main.jsx               # Application entry point
 ```
 
 ## 🔧 Development
 
-### Running Tests
+### Environment Setup
 ```bash
-# Backend tests
-cd iron_condor_backend
-source venv/bin/activate
-python -m pytest
+# Install dependencies
+npm install --legacy-peer-deps
 
-# Frontend tests
-cd iron-condor-trader
-npm test
-```
+# Start development server
+npm run dev
 
-### Building for Production
-```bash
-# Frontend build
-cd iron-condor-trader
+# Build for production
 npm run build
 
-# Backend requirements
-cd iron_condor_backend
-pip freeze > requirements.txt
+# Preview production build
+npm run preview
 ```
 
-## 📈 Performance Monitoring
+### Backend Development (Optional)
+The app includes a full Flask backend for development mode:
 
-The application provides comprehensive performance tracking:
-- Real-time P&L monitoring
-- Win/loss ratio analysis
-- Average trade duration
-- Profit target achievement rates
-- Risk-adjusted returns
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run Flask server
+python src/app.py
+```
+
+## 🌐 Deployment
+
+### GitHub Pages (Automatic)
+This repository is configured for automatic deployment to GitHub Pages:
+
+1. **Push to main branch** - Triggers automatic build and deployment
+2. **GitHub Actions** - Builds the app and deploys to Pages  
+3. **Live URL** - Available at https://praveenkay.github.io/iron-condor-trader/
+
+### Manual Deployment
+```bash
+# Build for production
+npm run build
+
+# Deploy the 'dist' folder to any static hosting service
+# (Netlify, Vercel, GitHub Pages, etc.)
+```
+
+## 🔒 Safety & Compliance
+
+### Trading Simulation
+- **No Real Money** - All trading is simulated for educational purposes
+- **No Real API Connections** - Webull integration is browser automation only
+- **Local Data Only** - No sensitive information transmitted or stored
+- **Educational Purpose** - Designed for learning options trading strategies
+
+### Data Privacy
+- **Local Storage** - All position data stored in browser localStorage
+- **No Server Dependency** - Demo mode works completely offline
+- **No Personal Information** - No registration or personal data required
+
+## 🧪 Testing
+
+### Automated Testing
+The app includes comprehensive testing features:
+
+- **Demo Data Creation** - Generates realistic sample positions
+- **Market Simulation** - Simulated VIX and stock price data
+- **Connection Testing** - Webull automation testing interface
+- **Reset Functionality** - Clean slate for testing scenarios
+
+### Manual Testing Checklist
+- [ ] App loads without errors
+- [ ] All buttons are clickable and responsive
+- [ ] Position creation works for different symbols
+- [ ] Position details display correctly
+- [ ] Demo data populates properly
+- [ ] Reset clears all data
+- [ ] Responsive design on mobile
+
+## 📊 Features in Detail
+
+### Iron Condor Strategy
+An Iron Condor is a neutral options strategy that profits from low volatility:
+- **Structure**: Sell put spread + sell call spread
+- **Profit Zone**: Stock price stays between short strikes
+- **Risk Management**: Limited profit and loss potential
+
+### Market Integration
+- **VIX Monitoring** - Volatility Index for optimal entry timing
+- **Real-time Data** - Live stock prices and market conditions (development mode)
+- **Condition Alerts** - Automated signals for favorable trading conditions
+
+### Position Analytics
+- **Strike Visualization** - Clear display of all four option legs
+- **P&L Tracking** - Real-time profit and loss calculations  
+- **Risk Metrics** - Maximum profit, maximum loss, breakeven points
+- **Time Decay** - Days to expiration tracking
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Guidelines
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🙋‍♂️ Support
 
-For technical support:
-1. Check the [User Instructions](USER_INSTRUCTIONS.md)
-2. Review browser console for errors
-3. Verify all dependencies are installed
-4. Ensure Webull account has options trading enabled
+Having issues? Here are some common solutions:
 
-## 🙏 Acknowledgments
+### Common Issues
+1. **Buttons not working** - Try refreshing the page
+2. **Data not loading** - Check if you're in the correct mode (Demo/Development)
+3. **Build errors** - Use `npm install --legacy-peer-deps`
 
-- Built with modern web technologies
-- Inspired by quantitative trading strategies
-- Designed for educational purposes
-- Community-driven development
+### Get Help
+- **Open an Issue** - [GitHub Issues](https://github.com/praveenkay/iron-condor-trader/issues)
+- **Check Documentation** - Review this README thoroughly
+- **Demo Mode** - Try the live demo for immediate access
+
+## 🔮 Roadmap
+
+### Upcoming Features
+- [ ] **Advanced Analytics** - Greeks calculation and visualization
+- [ ] **Strategy Builder** - Support for additional options strategies
+- [ ] **Paper Trading** - Enhanced simulation with realistic fills
+- [ ] **Mobile App** - React Native version
+- [ ] **Real-time Alerts** - Push notifications for position updates
 
 ---
 
-**⚠️ Trading Disclaimer**: This software is for educational purposes only. The authors are not responsible for any financial losses. Always consult with a financial advisor before making trading decisions.
+**⚠️ Disclaimer**: This application is for educational and demonstration purposes only. It is not intended for actual trading and should not be used with real money. Always consult with a qualified financial advisor before making investment decisions.
 
-
-
-## Dockerization and Deployment
-
-This application is fully containerized using Docker, allowing for easy deployment to various cloud platforms. The `docker-compose.yml` file orchestrates both the frontend (React) and backend (Flask) services.
-
-### Project Structure for Docker
-
-*   `iron-condor-backend/`: Contains the Flask backend application and its `Dockerfile`.
-*   `iron-condor-trader/`: Contains the React frontend application, its `Dockerfile`, and `nginx.conf`.
-*   `docker-compose.yml`: Defines the multi-container Docker application.
-*   `deploy.sh`: A convenience script to build and run the Docker containers locally.
-
-### How to Deploy
-
-For detailed instructions on how to deploy this application to a cloud environment (e.g., AWS EC2, GCP, Azure), please refer to the `CLOUD_DEPLOYMENT_GUIDE.md` file in the root directory of this project.
-
-### Local Docker Setup (for Development/Testing)
-
-1.  **Ensure Docker and Docker Compose are installed**: Follow the official Docker documentation for your operating system.
-2.  **Navigate to the project root**: `cd /path/to/iron-condor-trader-app`
-3.  **Run the deployment script**: `./deploy.sh`
-
-This script will build the Docker images, start the containers, and make the application accessible at `http://localhost` (frontend) and `http://localhost:5000/api` (backend API).
-
+**🚀 Built with ❤️ using React, Vite, and modern web technologies.**

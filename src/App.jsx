@@ -5,15 +5,22 @@ import { Badge } from '@/components/ui/badge.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
 import { Input } from '@/components/ui/input.jsx'
 import { Label } from '@/components/ui/label.jsx'
-import { AlertCircle, TrendingUp, Activity, Play, Loader2, RefreshCw, Plus, X } from 'lucide-react'
+import { AlertCircle, TrendingUp, Activity, Play, Loader2, RefreshCw, Plus, X, Globe } from 'lucide-react'
+import mockApi from './services/mockApi.js'
 import './App.css'
 
-// API base URL - Fixed for sandbox environment
-const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5001/api' 
-  : `https://5001-${window.location.hostname.split('-').slice(1).join('-')}/api`
+// Detect if we're in development (sandbox) or production
+const isDevelopment = window.location.hostname.includes('e2b.dev') || window.location.hostname === 'localhost'
 
-console.log('API Base URL:', API_BASE)
+// API configuration
+const API_BASE = isDevelopment 
+  ? (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5001/api' 
+    : `https://5001-${window.location.hostname.split('-').slice(1).join('-')}/api`)
+  : null // Use mock API in production
+
+console.log('Environment:', isDevelopment ? 'Development (Sandbox)' : 'Production (Standalone)')
+console.log('API Base URL:', API_BASE || 'Mock API Service')
 
 function App() {
   const [loading, setLoading] = useState(false)
@@ -29,17 +36,48 @@ function App() {
     setTimeout(() => setMessage(''), 5000)
   }
 
+  // API call wrapper - uses mock API in production, real API in development
+  const apiCall = async (endpoint, options = {}) => {
+    if (isDevelopment && API_BASE) {
+      // Use real API in development
+      const response = await fetch(`${API_BASE}${endpoint}`, options)
+      return response.json()
+    } else {
+      // Use mock API in production
+      switch (endpoint) {
+        case '/market/vix':
+          return await mockApi.getVixData()
+        case '/webull/status':
+          return await mockApi.getWebullStatus()
+        case '/positions/iron-condor':
+          if (options.method === 'POST') {
+            return await mockApi.createPosition(options.body ? JSON.parse(options.body) : {})
+          }
+          return await mockApi.getPositions()
+        case '/webull/initialize':
+          return await mockApi.initializeWebull(options.body ? JSON.parse(options.body) : {})
+        case '/webull/login-test':
+          return await mockApi.testWebullLogin()
+        case '/testing/demo-data':
+          return await mockApi.createDemoData()
+        case '/testing/reset':
+          return await mockApi.resetData()
+        default:
+          if (endpoint.includes('/positions/iron-condor/') && options.method === 'DELETE') {
+            const positionId = endpoint.split('/').pop()
+            return await mockApi.closePosition(positionId)
+          }
+          throw new Error(`Unknown endpoint: ${endpoint}`)
+      }
+    }
+  }
+
   // Fetch VIX data
   const fetchVixData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/market/vix`)
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setVixData(data)
-        }
-      } else {
-        console.error('Failed to fetch VIX data:', response.status)
+      const data = await apiCall('/market/vix')
+      if (data.success !== false) {
+        setVixData(data)
       }
     } catch (error) {
       console.error('Error fetching VIX data:', error)
@@ -49,13 +87,8 @@ function App() {
   // Fetch Webull status
   const fetchWebullStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE}/webull/status`)
-      if (response.ok) {
-        const data = await response.json()
-        setWebullStatus(data)
-      } else {
-        console.error('Failed to fetch Webull status:', response.status)
-      }
+      const data = await apiCall('/webull/status')
+      setWebullStatus(data)
     } catch (error) {
       console.error('Error fetching Webull status:', error)
     }
@@ -64,14 +97,9 @@ function App() {
   // Fetch positions
   const fetchPositions = async () => {
     try {
-      const response = await fetch(`${API_BASE}/positions/iron-condor`)
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setPositions(data.positions || [])
-        }
-      } else {
-        console.error('Failed to fetch positions:', response.status)
+      const data = await apiCall('/positions/iron-condor')
+      if (data.success !== false) {
+        setPositions(data.positions || [])
       }
     } catch (error) {
       console.error('Error fetching positions:', error)
@@ -82,24 +110,17 @@ function App() {
   const initializeWebull = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/webull/initialize`, {
+      const data = await apiCall('/webull/initialize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ headless: false })
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage(data.message || 'Webull initialized successfully!')
-          fetchWebullStatus()
-        } else {
-          showMessage(data.error || 'Failed to initialize Webull', true)
-        }
+      if (data.success) {
+        showMessage(data.message || 'Webull initialized successfully!')
+        fetchWebullStatus()
       } else {
-        showMessage('Failed to initialize Webull', true)
+        showMessage(data.error || 'Failed to initialize Webull', true)
       }
     } catch (error) {
       console.error('Error initializing Webull:', error)
@@ -113,22 +134,15 @@ function App() {
   const testWebullLogin = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/webull/login-test`, {
+      const data = await apiCall('/webull/login-test', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage(data.message || 'Login test successful!')
-        } else {
-          showMessage(data.message || 'Login test failed', true)
-        }
+      if (data.success) {
+        showMessage(data.message || 'Login test successful!')
       } else {
-        showMessage('Login test failed', true)
+        showMessage(data.message || 'Login test failed', true)
       }
     } catch (error) {
       console.error('Error testing login:', error)
@@ -142,25 +156,18 @@ function App() {
   const createPosition = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/positions/iron-condor`, {
+      const data = await apiCall('/positions/iron-condor', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbol: newSymbol })
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage(`Iron Condor created for ${newSymbol}!`)
-          fetchPositions()
-          setNewSymbol('SPY')
-        } else {
-          showMessage(data.error || 'Failed to create position', true)
-        }
+      if (data.success) {
+        showMessage(`Iron Condor created for ${newSymbol}!`)
+        fetchPositions()
+        setNewSymbol('SPY')
       } else {
-        showMessage('Failed to create position', true)
+        showMessage(data.error || 'Failed to create position', true)
       }
     } catch (error) {
       console.error('Error creating position:', error)
@@ -174,20 +181,15 @@ function App() {
   const closePosition = async (positionId) => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/positions/iron-condor/${positionId}`, {
+      const data = await apiCall(`/positions/iron-condor/${positionId}`, {
         method: 'DELETE'
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage(`Position closed: ${data.message}`)
-          fetchPositions()
-        } else {
-          showMessage(data.error || 'Failed to close position', true)
-        }
+      if (data.success) {
+        showMessage(`Position closed: ${data.message}`)
+        fetchPositions()
       } else {
-        showMessage('Failed to close position', true)
+        showMessage(data.error || 'Failed to close position', true)
       }
     } catch (error) {
       console.error('Error closing position:', error)
@@ -201,25 +203,18 @@ function App() {
   const createDemoData = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/testing/demo-data`, {
+      const data = await apiCall('/testing/demo-data', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage(`Demo data created: ${data.created_positions} positions`)
-          fetchPositions()
-          fetchWebullStatus()
-          fetchVixData()
-        } else {
-          showMessage(data.error || 'Failed to create demo data', true)
-        }
+      if (data.success) {
+        showMessage(`Demo data created: ${data.created_positions} positions`)
+        fetchPositions()
+        fetchWebullStatus()
+        fetchVixData()
       } else {
-        showMessage('Failed to create demo data', true)
+        showMessage(data.error || 'Failed to create demo data', true)
       }
     } catch (error) {
       console.error('Error creating demo data:', error)
@@ -233,25 +228,18 @@ function App() {
   const resetData = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/testing/reset`, {
+      const data = await apiCall('/testing/reset', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          showMessage('All data reset successfully!')
-          setPositions([])
-          setWebullStatus(null)
-          setVixData(null)
-        } else {
-          showMessage(data.error || 'Failed to reset data', true)
-        }
+      if (data.success) {
+        showMessage('All data reset successfully!')
+        setPositions([])
+        setWebullStatus(null)
+        setVixData(null)
       } else {
-        showMessage('Failed to reset data', true)
+        showMessage(data.error || 'Failed to reset data', true)
       }
     } catch (error) {
       console.error('Error resetting data:', error)
@@ -277,6 +265,17 @@ function App() {
             Iron Condor Trader
           </h1>
           <p className="text-slate-600">Webull Integration & Options Trading Simulation</p>
+          
+          {/* Environment indicator */}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Globe className="h-4 w-4" />
+            <Badge variant={isDevelopment ? "default" : "secondary"}>
+              {isDevelopment ? "Development Mode" : "Demo Mode"}
+            </Badge>
+            <span className="text-sm text-slate-500">
+              {isDevelopment ? "Full API Integration" : "Standalone Demo"}
+            </span>
+          </div>
         </div>
 
         {/* Message Display */}
@@ -386,7 +385,10 @@ function App() {
               <CardHeader>
                 <CardTitle>Webull Connection</CardTitle>
                 <CardDescription>
-                  Initialize and test your Webull browser automation
+                  {isDevelopment 
+                    ? "Initialize and test your Webull browser automation"
+                    : "Demo mode - simulates Webull connection for testing"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -421,7 +423,9 @@ function App() {
 
                 {webullStatus?.is_running && (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">✅ Webull automation is ready!</p>
+                    <p className="text-green-800 font-medium">
+                      ✅ Webull automation is ready{!isDevelopment ? ' (Demo Mode)' : ''}!
+                    </p>
                     <p className="text-green-700 text-sm">
                       You can now create Iron Condor positions and test trading functionality.
                     </p>
@@ -602,7 +606,7 @@ function App() {
                   <ul className="text-blue-800 text-sm space-y-1">
                     <li>• Creates sample Iron Condor positions for SPY, QQQ, and IWM</li>
                     <li>• Initializes Webull connection simulation</li>
-                    <li>• Fetches live VIX data for realistic market conditions</li>
+                    <li>• {isDevelopment ? "Fetches live VIX data for realistic conditions" : "Provides simulated market data"}</li>
                     <li>• All trading is simulated - no real money involved</li>
                   </ul>
                 </div>
@@ -611,11 +615,22 @@ function App() {
                   <h4 className="font-semibold text-amber-900 mb-2">Safety Features</h4>
                   <ul className="text-amber-800 text-sm space-y-1">
                     <li>• All positions are simulated for demonstration</li>
-                    <li>• Webull integration is browser automation only</li>
+                    <li>• {isDevelopment ? "Webull integration is browser automation only" : "Webull integration is fully simulated"}</li>
                     <li>• No real trading API connections</li>
                     <li>• Reset function clears all demo data</li>
                   </ul>
                 </div>
+
+                {!isDevelopment && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-2">Standalone Demo Mode</h4>
+                    <p className="text-green-800 text-sm">
+                      This app is running in standalone mode with a built-in mock API. 
+                      All data is stored locally in your browser and all functionality is fully simulated.
+                      Perfect for testing and demonstration without requiring a backend server.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
