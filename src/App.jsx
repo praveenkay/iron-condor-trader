@@ -5,86 +5,44 @@ import { Badge } from '@/components/ui/badge.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
 import { Input } from '@/components/ui/input.jsx'
 import { Label } from '@/components/ui/label.jsx'
-import { Switch } from '@/components/ui/switch.jsx'
-import { Progress } from '@/components/ui/progress.jsx'
-import { AlertCircle, TrendingUp, TrendingDown, Play, Square, Settings, BarChart3, Clock, DollarSign } from 'lucide-react'
+import { AlertCircle, TrendingUp, Activity, Play, Loader2, RefreshCw, Plus, X } from 'lucide-react'
 import './App.css'
 
-// API base URL
-const API_BASE = import.meta.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'
+// API base URL - Fixed for sandbox environment
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5001/api' 
+  : `https://5001-${window.location.hostname.split('-').slice(1).join('-')}/api`
+
+console.log('API Base URL:', API_BASE)
 
 function App() {
-  const [isTrading, setIsTrading] = useState(false)
-  const [vixData, setVixData] = useState({
-    current_vix: 18.45,
-    previous_vix: 17.82,
-    condition_met: true,
-    market_open: false
-  })
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [tradingConfig, setTradingConfig] = useState({
-    profit_target: 25,
-    time_limit: 120,
-    delta_target: 20,
-    auto_trade: false
-  })
+  const [loading, setLoading] = useState(false)
+  const [vixData, setVixData] = useState(null)
+  const [webullStatus, setWebullStatus] = useState(null)
   const [positions, setPositions] = useState([])
-  const [tradeHistory, setTradeHistory] = useState([])
-  const [webullStatus, setWebullStatus] = useState({
-    is_running: false,
-    has_automation: false
-  })
-  const [accountType, setAccountType] = useState('paper') // 'live' or 'paper'
+  const [newSymbol, setNewSymbol] = useState('SPY')
+  const [message, setMessage] = useState('')
+
+  // Utility function to show messages
+  const showMessage = (msg, isError = false) => {
+    setMessage(msg)
+    setTimeout(() => setMessage(''), 5000)
+  }
 
   // Fetch VIX data
   const fetchVixData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/vix`)
+      const response = await fetch(`${API_BASE}/market/vix`)
       if (response.ok) {
         const data = await response.json()
-        setVixData(data)
+        if (data.success) {
+          setVixData(data)
+        }
+      } else {
+        console.error('Failed to fetch VIX data:', response.status)
       }
     } catch (error) {
       console.error('Error fetching VIX data:', error)
-    }
-  }
-
-  // Fetch trading status
-  const fetchTradingStatus = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/status`)
-      if (response.ok) {
-        const data = await response.json()
-        setIsTrading(data.is_active)
-      }
-    } catch (error) {
-      console.error('Error fetching trading status:', error)
-    }
-  }
-
-  // Fetch positions
-  const fetchPositions = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/positions`)
-      if (response.ok) {
-        const data = await response.json()
-        setPositions(data)
-      }
-    } catch (error) {
-      console.error('Error fetching positions:', error)
-    }
-  }
-
-  // Fetch trade history
-  const fetchTradeHistory = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/history`)
-      if (response.ok) {
-        const data = await response.json()
-        setTradeHistory(data)
-      }
-    } catch (error) {
-      console.error('Error fetching trade history:', error)
     }
   }
 
@@ -95,114 +53,34 @@ function App() {
       if (response.ok) {
         const data = await response.json()
         setWebullStatus(data)
+      } else {
+        console.error('Failed to fetch Webull status:', response.status)
       }
     } catch (error) {
       console.error('Error fetching Webull status:', error)
     }
   }
 
-  // Fetch account type
-  const fetchAccountType = async () => {
+  // Fetch positions
+  const fetchPositions = async () => {
     try {
-      const response = await fetch(`${API_BASE}/webull/account-type`)
+      const response = await fetch(`${API_BASE}/positions/iron-condor`)
       if (response.ok) {
         const data = await response.json()
-        if (data.account_type) {
-          setAccountType(data.account_type)
+        if (data.success) {
+          setPositions(data.positions || [])
         }
+      } else {
+        console.error('Failed to fetch positions:', response.status)
       }
     } catch (error) {
-      console.error('Error fetching account type:', error)
+      console.error('Error fetching positions:', error)
     }
   }
 
-  // Initialize data on component mount
-  useEffect(() => {
-    fetchVixData()
-    fetchTradingStatus()
-    fetchPositions()
-    fetchTradeHistory()
-    fetchWebullStatus()
-    fetchAccountType()
-
-    // Set up intervals for real-time updates
-    const vixInterval = setInterval(fetchVixData, 30000) // Every 30 seconds
-    const statusInterval = setInterval(fetchTradingStatus, 10000) // Every 10 seconds
-    const positionsInterval = setInterval(fetchPositions, 15000) // Every 15 seconds
-    const accountInterval = setInterval(fetchAccountType, 20000) // Every 20 seconds
-
-    return () => {
-      clearInterval(vixInterval)
-      clearInterval(statusInterval)
-      clearInterval(positionsInterval)
-      clearInterval(accountInterval)
-    }
-  }, [])
-
-  // Update current time
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  const handleStartTrading = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.ok) {
-        setIsTrading(true)
-        fetchPositions() // Refresh positions
-      }
-    } catch (error) {
-      console.error('Error starting trading:', error)
-    }
-  }
-
-  const handleStopTrading = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/stop`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.ok) {
-        setIsTrading(false)
-        fetchPositions() // Refresh positions
-        fetchTradeHistory() // Refresh history
-      }
-    } catch (error) {
-      console.error('Error stopping trading:', error)
-    }
-  }
-
-  const handleSaveConfig = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/trading/config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(tradingConfig)
-      })
-      
-      if (response.ok) {
-        alert('Configuration saved successfully!')
-      }
-    } catch (error) {
-      console.error('Error saving config:', error)
-    }
-  }
-
+  // Initialize Webull
   const initializeWebull = async () => {
+    setLoading(true)
     try {
       const response = await fetch(`${API_BASE}/webull/initialize`, {
         method: 'POST',
@@ -213,390 +91,531 @@ function App() {
       })
       
       if (response.ok) {
-        fetchWebullStatus()
-        fetchAccountType()
-        alert('Webull automation initialized! Please log in manually in the browser window.')
+        const data = await response.json()
+        if (data.success) {
+          showMessage(data.message || 'Webull initialized successfully!')
+          fetchWebullStatus()
+        } else {
+          showMessage(data.error || 'Failed to initialize Webull', true)
+        }
+      } else {
+        showMessage('Failed to initialize Webull', true)
       }
     } catch (error) {
       console.error('Error initializing Webull:', error)
+      showMessage('Error initializing Webull', true)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const switchAccountType = async (targetType) => {
+  // Test Webull login
+  const testWebullLogin = async () => {
+    setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/webull/switch-account`, {
+      const response = await fetch(`${API_BASE}/webull/login-test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ account_type: targetType })
+        }
       })
       
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setAccountType(targetType)
-          alert(`Successfully switched to ${targetType} account`)
+          showMessage(data.message || 'Login test successful!')
         } else {
-          alert(`Failed to switch to ${targetType} account`)
+          showMessage(data.message || 'Login test failed', true)
         }
+      } else {
+        showMessage('Login test failed', true)
       }
     } catch (error) {
-      console.error('Error switching account type:', error)
+      console.error('Error testing login:', error)
+      showMessage('Error testing login', true)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const totalPnl = positions.reduce((sum, pos) => sum + (pos.pnl || 0), 0)
+  // Create Iron Condor position
+  const createPosition = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE}/positions/iron-condor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ symbol: newSymbol })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          showMessage(`Iron Condor created for ${newSymbol}!`)
+          fetchPositions()
+          setNewSymbol('SPY')
+        } else {
+          showMessage(data.error || 'Failed to create position', true)
+        }
+      } else {
+        showMessage('Failed to create position', true)
+      }
+    } catch (error) {
+      console.error('Error creating position:', error)
+      showMessage('Error creating position', true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Close position
+  const closePosition = async (positionId) => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE}/positions/iron-condor/${positionId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          showMessage(`Position closed: ${data.message}`)
+          fetchPositions()
+        } else {
+          showMessage(data.error || 'Failed to close position', true)
+        }
+      } else {
+        showMessage('Failed to close position', true)
+      }
+    } catch (error) {
+      console.error('Error closing position:', error)
+      showMessage('Error closing position', true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Create demo data
+  const createDemoData = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE}/testing/demo-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          showMessage(`Demo data created: ${data.created_positions} positions`)
+          fetchPositions()
+          fetchWebullStatus()
+          fetchVixData()
+        } else {
+          showMessage(data.error || 'Failed to create demo data', true)
+        }
+      } else {
+        showMessage('Failed to create demo data', true)
+      }
+    } catch (error) {
+      console.error('Error creating demo data:', error)
+      showMessage('Error creating demo data', true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Reset all data
+  const resetData = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE}/testing/reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          showMessage('All data reset successfully!')
+          setPositions([])
+          setWebullStatus(null)
+          setVixData(null)
+        } else {
+          showMessage(data.error || 'Failed to reset data', true)
+        }
+      } else {
+        showMessage('Failed to reset data', true)
+      }
+    } catch (error) {
+      console.error('Error resetting data:', error)
+      showMessage('Error resetting data', true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initialize data on component mount
+  useEffect(() => {
+    fetchVixData()
+    fetchWebullStatus()
+    fetchPositions()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
-      <div className="container mx-auto p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+      <div className="container mx-auto p-6 max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Iron Condor Trader
           </h1>
-          <p className="text-slate-300">0DTE Trading Bot - Automated Treasure Hunting</p>
+          <p className="text-slate-600">Webull Integration & Options Trading Simulation</p>
         </div>
 
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            message.includes('Error') || message.includes('Failed') 
+              ? 'bg-red-50 border-red-200 text-red-800' 
+              : 'bg-green-50 border-green-200 text-green-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              {message}
+            </div>
+          </div>
+        )}
+
         {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-slate-800/50 border-slate-700">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                VIX Status
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Market Data
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{vixData.current_vix}</div>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={vixData.condition_met ? "default" : "secondary"} className={vixData.condition_met ? "bg-green-600" : "bg-red-600"}>
-                  {vixData.condition_met ? "Condition Met" : "Condition Not Met"}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-400 mt-2">Previous: {vixData.previous_vix}</p>
+              {vixData ? (
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-slate-900">
+                    VIX: {vixData.vix}
+                  </div>
+                  <Badge variant={vixData.condition_met ? "default" : "secondary"}>
+                    {vixData.condition_met ? "Good Conditions" : "Wait"}
+                  </Badge>
+                  <p className="text-sm text-slate-600">{vixData.message}</p>
+                </div>
+              ) : (
+                <div className="text-slate-500">Loading market data...</div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Market Time
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Activity className="h-5 w-5 text-green-600" />
+                Webull Status
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {currentTime.toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  timeZone: 'America/New_York'
-                })}
-              </div>
-              <Badge variant={vixData.market_open ? "default" : "secondary"} className={vixData.market_open ? "bg-green-600" : "bg-slate-600"}>
-                {vixData.market_open ? "Market Open" : "Pre-Market"}
-              </Badge>
+              {webullStatus ? (
+                <div className="space-y-2">
+                  <Badge variant={webullStatus.is_running ? "default" : "secondary"}>
+                    {webullStatus.is_running ? "Connected" : "Disconnected"}
+                  </Badge>
+                  <p className="text-sm text-slate-600">
+                    Automation: {webullStatus.has_automation ? "Ready" : "Not Ready"}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Positions: {webullStatus.positions_count || 0}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-slate-500">Loading status...</div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Bot Status
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Play className="h-5 w-5 text-purple-600" />
+                Positions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {isTrading ? "Active" : "Idle"}
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-slate-900">
+                  {positions.length}
+                </div>
+                <p className="text-sm text-slate-600">
+                  Active Iron Condors
+                </p>
+                {positions.length > 0 && (
+                  <div className="text-sm">
+                    <span className="text-green-600">
+                      Total P&L: ${positions.reduce((sum, pos) => sum + (pos.pnl || 0), 0).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
-              <Badge variant={isTrading ? "default" : "secondary"} className={isTrading ? "bg-blue-600" : "bg-slate-600"}>
-                {isTrading ? "Trading" : "Stopped"}
-              </Badge>
-              <p className="text-xs text-slate-400 mt-2">
-                Webull: {webullStatus.is_running ? "Connected" : "Disconnected"}
-              </p>
-              <p className="text-xs text-slate-400">
-                Account: {accountType === 'live' ? 'Live Trading' : 'Paper Trading'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Today's P&L
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
-              </div>
-              <div className="text-xs text-slate-400">{positions.length} Active Position{positions.length !== 1 ? 's' : ''}</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="bg-slate-800/50 border-slate-700">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+        <Tabs defaultValue="trading" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="positions">Positions</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="testing">Testing</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            {/* Trading Controls */}
-            <Card className="bg-slate-800/50 border-slate-700">
+          <TabsContent value="trading" className="space-y-6">
+            {/* Webull Connection */}
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Trading Controls
-                </CardTitle>
+                <CardTitle>Webull Connection</CardTitle>
                 <CardDescription>
-                  Manual controls for the trading bot
+                  Initialize and test your Webull browser automation
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-4">
-                  <Button 
-                    onClick={handleStartTrading}
-                    disabled={isTrading || !vixData.condition_met}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Trading
-                  </Button>
-                  <Button 
-                    onClick={handleStopTrading}
-                    disabled={!isTrading}
-                    variant="destructive"
-                  >
-                    <Square className="h-4 w-4 mr-2" />
-                    Stop Trading
-                  </Button>
+                <div className="flex flex-wrap gap-3">
                   <Button 
                     onClick={initializeWebull}
-                    disabled={webullStatus.is_running}
+                    disabled={loading}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Initialize Webull
+                  </Button>
+                  
+                  <Button 
+                    onClick={testWebullLogin}
+                    disabled={loading || !webullStatus?.is_running}
                     variant="outline"
                   >
-                    Initialize Webull
+                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Test Login
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => { fetchVixData(); fetchWebullStatus(); fetchPositions(); }}
+                    disabled={loading}
+                    variant="outline"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh Data
                   </Button>
                 </div>
 
-                {/* Account Type Selection */}
-                {webullStatus.is_running && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Account Type</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => switchAccountType('paper')}
-                        variant={accountType === 'paper' ? 'default' : 'outline'}
-                        size="sm"
-                        className={accountType === 'paper' ? 'bg-blue-600' : ''}
-                      >
-                        Paper Trading
-                      </Button>
-                      <Button
-                        onClick={() => switchAccountType('live')}
-                        variant={accountType === 'live' ? 'default' : 'outline'}
-                        size="sm"
-                        className={accountType === 'live' ? 'bg-red-600' : ''}
-                      >
-                        Live Trading
-                      </Button>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Current: {accountType === 'live' ? 'Live Trading (Real Money)' : 'Paper Trading (Simulated)'}
+                {webullStatus?.is_running && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 font-medium">✅ Webull automation is ready!</p>
+                    <p className="text-green-700 text-sm">
+                      You can now create Iron Condor positions and test trading functionality.
                     </p>
-                  </div>
-                )}
-                
-                {!vixData.condition_met && (
-                  <div className="flex items-center gap-2 text-amber-400">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm">VIX condition not met. Trading disabled.</span>
-                  </div>
-                )}
-
-                {accountType === 'live' && (
-                  <div className="flex items-center gap-2 text-red-400 bg-red-900/20 p-2 rounded">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">⚠️ LIVE TRADING MODE - Real money at risk!</span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Strategy Rules */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            {/* Create Position */}
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Strategy Rules</CardTitle>
+                <CardTitle>Create Iron Condor Position</CardTitle>
                 <CardDescription>
-                  Current 0DTE Iron Condor configuration
+                  Enter a symbol to create a new Iron Condor position
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Entry Conditions</h4>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• VIX higher than previous close</li>
-                      <li>• Market open at 9:30 AM ET</li>
-                      <li>• {tradingConfig.delta_target} Delta strikes for calls/puts</li>
-                    </ul>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Label htmlFor="symbol">Symbol</Label>
+                    <Input
+                      id="symbol"
+                      value={newSymbol}
+                      onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+                      placeholder="SPY"
+                      className="mt-1"
+                    />
                   </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Exit Conditions</h4>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• {tradingConfig.profit_target}% profit target</li>
-                      <li>• {tradingConfig.time_limit} minute time limit</li>
-                      <li>• Automatic position closure</li>
-                    </ul>
+                  <div className="flex items-end">
+                    <Button 
+                      onClick={createPosition}
+                      disabled={loading || !webullStatus?.is_running || !newSymbol}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                      Create Position
+                    </Button>
                   </div>
                 </div>
+                
+                {!webullStatus?.is_running && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-amber-800 text-sm">
+                      ⚠️ Please initialize Webull connection first
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="positions" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Current Positions</CardTitle>
+                <CardTitle>Active Positions</CardTitle>
                 <CardDescription>
-                  Active Iron Condor positions
+                  Manage your Iron Condor positions
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {positions.length > 0 ? (
                   <div className="space-y-4">
                     {positions.map((position) => (
-                      <div key={position.id} className="border border-slate-600 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-3">
+                      <div key={position.id} className="border border-slate-200 rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-medium">{position.symbol} {position.type}</h4>
-                            <p className="text-sm text-slate-400">Entry: {position.entry_time}</p>
-                          </div>
-                          <Badge variant={position.status === 'Open' ? 'default' : 'secondary'}>
-                            {position.status}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-slate-400">P&L</p>
-                            <p className={`font-medium ${position.pnl > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              ${position.pnl}
+                            <h4 className="font-semibold text-lg">{position.symbol} Iron Condor</h4>
+                            <p className="text-sm text-slate-600">
+                              Opened: {new Date(position.opened_at).toLocaleString()}
                             </p>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={position.status === 'open' ? "default" : "secondary"}>
+                              {position.status}
+                            </Badge>
+                            {position.status === 'open' && (
+                              <Button 
+                                onClick={() => closePosition(position.id)}
+                                disabled={loading}
+                                size="sm"
+                                variant="outline"
+                              >
+                                {loading ? <Loader2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-slate-400">Credit</p>
-                            <p className="font-medium">${position.credit}</p>
+                            <p className="text-slate-600">Underlying Price</p>
+                            <p className="font-semibold">${position.underlying_price}</p>
                           </div>
                           <div>
-                            <p className="text-slate-400">Progress</p>
-                            <Progress value={position.progress} className="mt-1" />
+                            <p className="text-slate-600">Premium Collected</p>
+                            <p className="font-semibold text-green-600">${position.premium_collected}</p>
                           </div>
+                          <div>
+                            <p className="text-slate-600">Max Profit</p>
+                            <p className="font-semibold text-green-600">${position.max_profit}</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-600">Max Loss</p>
+                            <p className="font-semibold text-red-600">${position.max_loss}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-2 rounded">
+                          <div className="text-center">
+                            <p className="text-slate-600">Put Long</p>
+                            <p className="font-mono">${position.strikes.put_long}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-slate-600">Put Short</p>
+                            <p className="font-mono">${position.strikes.put_short}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-slate-600">Call Short</p>
+                            <p className="font-mono">${position.strikes.call_short}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-slate-600">Call Long</p>
+                            <p className="font-mono">${position.strikes.call_long}</p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-slate-600 text-sm">Days to Expiration: {position.days_to_expiration}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-center py-8">No active positions</p>
+                  <div className="text-center py-12">
+                    <div className="text-slate-400 mb-4">
+                      <Play className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      No active positions
+                    </div>
+                    <p className="text-slate-600">Create your first Iron Condor position to get started.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
+          <TabsContent value="testing" className="space-y-6">
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Trade History</CardTitle>
+                <CardTitle>Testing & Demo</CardTitle>
                 <CardDescription>
-                  Recent trading results
+                  Test the application with demo data and reset functionality
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {tradeHistory.map((trade) => (
-                    <div key={trade.id} className="flex justify-between items-center border border-slate-600 rounded-lg p-3">
-                      <div>
-                        <p className="font-medium">{trade.symbol} {trade.type}</p>
-                        <p className="text-sm text-slate-400">{trade.date} • {trade.duration}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={trade.result === 'Win' ? 'default' : 'destructive'} className={trade.result === 'Win' ? 'bg-green-600' : 'bg-red-600'}>
-                          {trade.result}
-                        </Badge>
-                        <p className={`text-sm font-medium mt-1 ${trade.pnl > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          ${trade.pnl}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button 
+                    onClick={createDemoData}
+                    disabled={loading}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Create Demo Data
+                  </Button>
+                  
+                  <Button 
+                    onClick={resetData}
+                    disabled={loading}
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Reset All Data
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
-                <CardTitle>Trading Configuration</CardTitle>
-                <CardDescription>
-                  Adjust bot parameters and settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="profit-target">Profit Target (%)</Label>
-                      <Input
-                        id="profit-target"
-                        type="number"
-                        value={tradingConfig.profit_target}
-                        onChange={(e) => setTradingConfig({...tradingConfig, profit_target: parseInt(e.target.value)})}
-                        className="bg-slate-700 border-slate-600"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="time-limit">Time Limit (minutes)</Label>
-                      <Input
-                        id="time-limit"
-                        type="number"
-                        value={tradingConfig.time_limit}
-                        onChange={(e) => setTradingConfig({...tradingConfig, time_limit: parseInt(e.target.value)})}
-                        className="bg-slate-700 border-slate-600"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="delta-target">Delta Target</Label>
-                      <Input
-                        id="delta-target"
-                        type="number"
-                        value={tradingConfig.delta_target}
-                        onChange={(e) => setTradingConfig({...tradingConfig, delta_target: parseInt(e.target.value)})}
-                        className="bg-slate-700 border-slate-600"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="auto-trade"
-                        checked={tradingConfig.auto_trade}
-                        onCheckedChange={(checked) => setTradingConfig({...tradingConfig, auto_trade: checked})}
-                      />
-                      <Label htmlFor="auto-trade">Enable Auto Trading</Label>
-                    </div>
-                  </div>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 mb-2">Demo Data Information</h4>
+                  <ul className="text-blue-800 text-sm space-y-1">
+                    <li>• Creates sample Iron Condor positions for SPY, QQQ, and IWM</li>
+                    <li>• Initializes Webull connection simulation</li>
+                    <li>• Fetches live VIX data for realistic market conditions</li>
+                    <li>• All trading is simulated - no real money involved</li>
+                  </ul>
                 </div>
-                <Button onClick={handleSaveConfig} className="w-full bg-blue-600 hover:bg-blue-700">
-                  Save Configuration
-                </Button>
+
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <h4 className="font-semibold text-amber-900 mb-2">Safety Features</h4>
+                  <ul className="text-amber-800 text-sm space-y-1">
+                    <li>• All positions are simulated for demonstration</li>
+                    <li>• Webull integration is browser automation only</li>
+                    <li>• No real trading API connections</li>
+                    <li>• Reset function clears all demo data</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -607,4 +626,3 @@ function App() {
 }
 
 export default App
-
