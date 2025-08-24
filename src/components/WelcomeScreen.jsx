@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button.jsx'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
-import { Badge } from '@/components/ui/badge.jsx'
-import { GraduationCap, TrendingUp, Settings, ArrowRight, Zap, Shield, BookOpen, Target } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 
 const WelcomeScreen = ({ onSelectLevel, isDevelopment }) => {
   const [selectedLevel, setSelectedLevel] = useState(null)
@@ -11,50 +9,17 @@ const WelcomeScreen = ({ onSelectLevel, isDevelopment }) => {
     {
       id: 'beginner',
       title: 'Beginner',
-      subtitle: 'New to Options Trading',
-      icon: BookOpen,
-      description: 'Learn the basics with guided tutorials and simplified interface',
-      features: [
-        'Step-by-step tutorials',
-        'Simplified dashboard',
-        'Risk explanations',
-        'Basic strategy focus',
-        'Educational tooltips'
-      ],
-      color: 'bg-emerald-500',
-      recommended: true
+      description: 'Perfect for new traders'
     },
     {
       id: 'intermediate',
       title: 'Intermediate', 
-      subtitle: 'Some Options Experience',
-      icon: TrendingUp,
-      description: 'Balance of guidance and advanced features for growing traders',
-      features: [
-        'Moderate complexity',
-        'Strategy comparisons',
-        'Risk management tools',
-        'Market analysis',
-        'Performance tracking'
-      ],
-      color: 'bg-blue-500',
-      recommended: false
+      description: 'Growing your expertise'
     },
     {
       id: 'expert',
       title: 'Expert',
-      subtitle: 'Advanced Options Trader',
-      icon: Settings,
-      description: 'Full access to all features with minimal guidance',
-      features: [
-        'Complete feature access',
-        'Advanced analytics',
-        'Custom strategies',
-        'Professional tools',
-        'API integration'
-      ],
-      color: 'bg-purple-500',
-      recommended: false
+      description: 'Professional trading'
     }
   ]
 
@@ -65,91 +30,59 @@ const WelcomeScreen = ({ onSelectLevel, isDevelopment }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-white flex items-center justify-center p-8">
+      <div className="max-w-2xl mx-auto w-full">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-6">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl">
-              <Target className="h-8 w-8 text-white" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Iron Condor Trader
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-normal text-black mb-4 tracking-tight">
+            Iron Condor
           </h1>
-          <p className="text-xl text-slate-600 mb-2">
+          <p className="text-lg text-gray-600 mb-8">
             Professional Options Trading Platform
           </p>
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
-              {isDevelopment ? "Full API Integration" : "Demo Mode"}
-            </Badge>
-            <Badge variant="outline">
-              <Shield className="h-3 w-3 mr-1" />
-              100% Safe Simulation
-            </Badge>
-          </div>
           
-          <div className="max-w-2xl mx-auto text-slate-600">
-            <p className="mb-4">
-              Master Iron Condor options strategies with our intelligent trading platform. 
-              Choose your experience level to get a personalized interface that grows with your skills.
-            </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full text-sm text-gray-700">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+            {isDevelopment ? "Live Mode" : "Demo Mode"}
           </div>
         </div>
 
         {/* User Level Selection */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-center mb-8 text-slate-800">
-            Choose Your Experience Level
+        <div className="mb-12">
+          <h2 className="text-xl text-gray-900 mb-8 text-center">
+            Choose your experience level
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-3">
             {userLevels.map((level) => {
-              const Icon = level.icon
               const isSelected = selectedLevel === level.id
               
               return (
-                <Card 
+                <button
                   key={level.id}
-                  className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-2 ${
+                  className={`w-full text-left p-4 rounded-lg border transition-all duration-200 ${
                     isSelected 
-                      ? 'border-blue-500 shadow-lg scale-105' 
-                      : 'border-slate-200 hover:border-slate-300'
-                  } ${level.recommended ? 'ring-2 ring-emerald-200' : ''}`}
+                      ? 'border-black bg-gray-50' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
                   onClick={() => setSelectedLevel(level.id)}
                 >
-                  <CardHeader className="text-center pb-4">
-                    {level.recommended && (
-                      <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-emerald-500">
-                        <Zap className="h-3 w-3 mr-1" />
-                        Recommended
-                      </Badge>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-900 mb-1">
+                        {level.title}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {level.description}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div className="flex-shrink-0">
+                        <Check className="w-5 h-5 text-black" />
+                      </div>
                     )}
-                    <div className={`${level.color} w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4`}>
-                      <Icon className="h-8 w-8 text-white" />
-                    </div>
-                    <CardTitle className="text-xl">{level.title}</CardTitle>
-                    <CardDescription className="text-sm font-medium">
-                      {level.subtitle}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent className="pt-0">
-                    <p className="text-slate-600 text-sm mb-4 text-center">
-                      {level.description}
-                    </p>
-                    
-                    <div className="space-y-2">
-                      {level.features.map((feature, index) => (
-                        <div key={index} className="flex items-center text-sm">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-3 flex-shrink-0" />
-                          <span className="text-slate-600">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </button>
               )
             })}
           </div>
@@ -160,35 +93,21 @@ const WelcomeScreen = ({ onSelectLevel, isDevelopment }) => {
           <Button 
             onClick={handleStart}
             disabled={!selectedLevel}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              selectedLevel
+                ? 'bg-black text-white hover:bg-gray-800'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
           >
-            {selectedLevel ? `Start as ${userLevels.find(l => l.id === selectedLevel)?.title}` : 'Select Your Level'}
-            <ArrowRight className="ml-2 h-5 w-5" />
+            {selectedLevel ? 'Continue' : 'Select a level'}
+            {selectedLevel && <ArrowRight className="w-4 h-4" />}
           </Button>
           
           {selectedLevel && (
-            <p className="text-sm text-slate-500 mt-3">
-              You can change your experience level anytime in settings
+            <p className="text-sm text-gray-500 mt-4">
+              You can change this later in settings
             </p>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-16 text-center">
-          <div className="flex items-center justify-center gap-8 text-sm text-slate-500">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <span>Risk-Free Learning</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
-              <span>Educational Platform</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span>Professional Tools</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

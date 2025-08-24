@@ -1,17 +1,17 @@
-/* Clean, minimalist design */
+/* Minimalist design inspired by 21st.dev */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
   color-scheme: light;
   
-  /* Clean color palette */
-  --primary: #2563eb;
+  /* Minimal color palette */
+  --primary: #000000;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #475569;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #666666;
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,28 +24,35 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #ffffff;
+  color: #000000;
 }
 
-/* Button and interactive element focus states */
+/* Subtle focus states */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 1px solid #000000;
   outline-offset: 2px;
 }
 
-/* Smooth transitions */
+/* Smooth, subtle transitions */
 * {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.15s ease;
 }
 
-/* Card hover effects */
+/* Clean card styling */
+.card {
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
+}
+
 .card:hover {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: #d1d1d1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Loading animation */
+/* Simple loading animation */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -59,26 +66,30 @@ select:focus-visible {
   animation: spin 1s linear infinite;
 }
 
-/* Gradient text */
-.bg-gradient-to-r {
-  background: linear-gradient(to right, var(--tw-gradient-stops));
+/* Clean button styling */
+.btn {
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
+  color: #000000;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
-.from-blue-600 {
-  --tw-gradient-from: #2563eb;
+.btn:hover {
+  background: #f5f5f5;
+  border-color: #d1d1d1;
 }
 
-.to-purple-600 {
-  --tw-gradient-to: #9333ea;
+.btn-primary {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
 }
 
-.bg-clip-text {
-  background-clip: text;
-  -webkit-background-clip: text;
-}
-
-.text-transparent {
-  color: transparent;
+.btn-primary:hover {
+  background: #333333;
 }
 
 /* Custom scrollbar */

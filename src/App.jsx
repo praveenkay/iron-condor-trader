@@ -322,18 +322,18 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto p-6 max-w-7xl">
         {/* Global Message Display */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg border ${
+          <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg border shadow-lg transition-all duration-300 ${
             message.includes('Error') || message.includes('Failed') 
-              ? 'bg-red-50 border-red-200 text-red-800' 
-              : 'bg-green-50 border-green-200 text-green-800'
+              ? 'bg-red-50 border-red-200 text-red-900' 
+              : 'bg-green-50 border-green-200 text-green-900'
           }`}>
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
-              {message}
+              <span className="text-sm font-medium">{message}</span>
             </div>
           </div>
         )}

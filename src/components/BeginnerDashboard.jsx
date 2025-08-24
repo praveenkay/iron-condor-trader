@@ -4,17 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge.jsx'
 import { Progress } from '@/components/ui/progress.jsx'
 import { 
-  BookOpen, 
+  ArrowLeft,
   Play, 
   CheckCircle, 
-  AlertTriangle, 
   TrendingUp, 
   DollarSign, 
-  Shield,
-  Lightbulb,
   ArrowRight,
-  HelpCircle,
-  BarChart3
+  Settings
 } from 'lucide-react'
 
 const BeginnerDashboard = ({ 
@@ -92,96 +88,86 @@ const BeginnerDashboard = ({
   const progressPercentage = (completedSteps.size / tutorialSteps.length) * 100
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-4xl mx-auto space-y-12">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Beginner Dashboard</h1>
-          <p className="text-slate-600">Learn Iron Condor trading step by step</p>
+          <div className="flex items-center gap-4 mb-2">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-medium text-black">Beginner</h1>
+          </div>
+          <p className="text-gray-600 ml-14">Learn Iron Condor trading fundamentals</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack}>
-            Change Level
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowTutorial(!showTutorial)}
-          >
-            {showTutorial ? 'Hide Tutorial' : 'Show Tutorial'}
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => setShowTutorial(!showTutorial)}
+          className="border-gray-200 hover:bg-gray-50"
+        >
+          {showTutorial ? 'Hide Guide' : 'Show Guide'}
+        </Button>
       </div>
 
       {/* Progress Overview */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-emerald-600" />
-                Learning Progress
-              </CardTitle>
-              <CardDescription>Complete these steps to master Iron Condor basics</CardDescription>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-emerald-600">{completedSteps.size}/{tutorialSteps.length}</div>
-              <div className="text-sm text-slate-600">Steps Complete</div>
-            </div>
+      <div className="bg-gray-50 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-medium text-gray-900">Learning Progress</h2>
+            <p className="text-sm text-gray-600">Complete steps to master the basics</p>
           </div>
-          <Progress value={progressPercentage} className="w-full mt-4" />
-        </CardHeader>
-      </Card>
+          <div className="text-right">
+            <div className="text-lg font-medium text-gray-900">{completedSteps.size}/{tutorialSteps.length}</div>
+            <div className="text-sm text-gray-500">completed</div>
+          </div>
+        </div>
+        <Progress value={progressPercentage} className="w-full h-2" />
+      </div>
 
       {/* Tutorial Steps */}
       {showTutorial && (
-        <div className="grid gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
-                Getting Started Tutorial
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {tutorialSteps.map((step) => {
-                  const isCompleted = completedSteps.has(step.id) || step.completed
-                  const isCurrent = step.id === currentStep && !isCompleted
-                  
-                  return (
-                    <div 
-                      key={step.id}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        isCompleted 
-                          ? 'bg-green-50 border-green-200' 
-                          : isCurrent 
-                          ? 'bg-blue-50 border-blue-300 shadow-md' 
-                          : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              isCompleted ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-slate-400'
-                            }`}>
-                              {isCompleted ? (
-                                <CheckCircle className="h-5 w-5 text-white" />
-                              ) : (
-                                <span className="text-white font-bold">{step.id}</span>
-                              )}
-                            </div>
-                            <h3 className="font-semibold text-slate-800">{step.title}</h3>
-                          </div>
-                          <p className="text-slate-600 ml-11">{step.description}</p>
+        <div className="space-y-6">
+          <h2 className="font-medium text-gray-900">Getting Started</h2>
+          
+          <div className="space-y-3">
+            {tutorialSteps.map((step) => {
+              const isCompleted = completedSteps.has(step.id) || step.completed
+              const isCurrent = step.id === currentStep && !isCompleted
+              
+              return (
+                <div 
+                  key={step.id}
+                  className={`p-4 rounded-lg border transition-all ${
+                    isCompleted 
+                      ? 'bg-green-50 border-green-200' 
+                      : isCurrent 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                          isCompleted ? 'bg-green-600 text-white' : 
+                          isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                        }`}>
+                          {isCompleted ? <CheckCircle className="h-4 w-4" /> : step.id}
                         </div>
-                        
-                        {!isCompleted && (
-                          <Button 
-                            onClick={() => handleStepAction(step.id)}
-                            disabled={loading}
-                            className={isCurrent ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                            variant={isCurrent ? 'default' : 'outline'}
+                        <h3 className="font-medium text-gray-900">{step.title}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 ml-9">{step.description}</p>
+                    </div>
+                    
+                    {!isCompleted && (
+                      <Button 
+                        onClick={() => handleStepAction(step.id)}
+                        disabled={loading}
+                        variant={isCurrent ? 'default' : 'outline'}
+                        className={`ml-4 ${isCurrent ? 'bg-black hover:bg-gray-800 text-white' : 'border-gray-200 hover:bg-gray-50'}`}
                           >
                             {step.action}
                             <ArrowRight className="ml-2 h-4 w-4" />
@@ -191,9 +177,7 @@ const BeginnerDashboard = ({
                     </div>
                   )
                 })}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       )}
 
