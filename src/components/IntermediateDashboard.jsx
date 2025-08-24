@@ -1,506 +1,523 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
 import { Input } from '@/components/ui/input.jsx'
-import { Label } from '@/components/ui/label.jsx'
 import { 
+  ArrowLeft,
   TrendingUp, 
-  Activity, 
-  BarChart3, 
-  Settings, 
-  Target,
-  DollarSign,
-  AlertTriangle,
-  TrendingDown,
-  RefreshCw,
+  DollarSign, 
+  Activity,
+  BarChart3,
+  Settings,
+  Wifi,
+  WifiOff,
   Plus,
-  X,
-  Calculator,
-  PieChart,
-  Clock
+  Trash2,
+  RefreshCw,
+  Target,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  TrendingDown
 } from 'lucide-react'
 
 const IntermediateDashboard = ({ 
-  onBack,
-  vixData,
-  webullStatus,
-  positions,
+  onBack, 
+  vixData, 
+  webullStatus, 
+  positions, 
   loading,
   initializeWebull,
   testWebullLogin,
+  createDemoData,
   createPosition,
   closePosition,
-  createDemoData,
-  resetData,
+  newSymbol,
+  setNewSymbol,
+  showMessage,
   fetchVixData,
   fetchWebullStatus,
   fetchPositions,
-  newSymbol,
-  setNewSymbol
+  resetData
 }) => {
-  const [activeView, setActiveView] = useState('dashboard')
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
 
   // Calculate portfolio metrics
-  const totalPnL = positions.reduce((sum, pos) => sum + (pos.pnl || 0), 0)
-  const totalPremium = positions.reduce((sum, pos) => sum + (pos.premium_collected || 0), 0)
-  const winRate = positions.length > 0 ? (positions.filter(p => (p.pnl || 0) > 0).length / positions.length * 100) : 0
-
-  const riskLevels = {
-    low: positions.filter(p => (p.max_loss || 0) < 50),
-    medium: positions.filter(p => (p.max_loss || 0) >= 50 && (p.max_loss || 0) < 100),
-    high: positions.filter(p => (p.max_loss || 0) >= 100)
-  }
+  const totalPnL = positions.reduce((sum, pos) => sum + (pos.current_pnl || 0), 0)
+  const totalMaxProfit = positions.reduce((sum, pos) => sum + (pos.max_profit || 0), 0)
+  const totalMaxLoss = positions.reduce((sum, pos) => sum + (pos.max_loss || 0), 0)
+  const winningPositions = positions.filter(pos => (pos.current_pnl || 0) > 0).length
+  const winRate = positions.length > 0 ? (winningPositions / positions.length * 100).toFixed(1) : '0'
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Intermediate Dashboard</h1>
-          <p className="text-slate-600">Enhanced trading tools with risk management</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack}>
-            Change Level
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? 'Simplified View' : 'Advanced View'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-emerald-600 text-sm font-medium">Total P&L</p>
-                <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                  {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-emerald-600 opacity-80" />
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-semibold text-gray-900">Intermediate Dashboard</h1>
+              <p className="text-gray-600">Enhanced trading tools with risk management</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-600 text-sm font-medium">Active Positions</p>
-                <p className="text-2xl font-bold text-blue-700">{positions.length}</p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-blue-600 opacity-80" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-600 text-sm font-medium">Win Rate</p>
-                <p className="text-2xl font-bold text-purple-700">{winRate.toFixed(0)}%</p>
-              </div>
-              <Target className="h-8 w-8 text-purple-600 opacity-80" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-amber-600 text-sm font-medium">VIX Level</p>
-                <p className="text-2xl font-bold text-amber-700">
-                  {vixData?.vix || '--'}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-amber-600 opacity-80" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeView} onValueChange={setActiveView} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="positions">Positions</TabsTrigger>
-          <TabsTrigger value="analysis">Analysis</TabsTrigger>
-          <TabsTrigger value="trading">Trading</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="space-y-6">
-          {/* Market Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  Market Conditions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {vixData ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">VIX</span>
-                      <span className="text-2xl font-bold">{vixData.vix}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Market Status</span>
-                      <Badge variant={vixData.market_open ? "default" : "secondary"}>
-                        {vixData.market_open ? "Open" : "Closed"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">IC Conditions</span>
-                      <Badge variant={vixData.condition_met ? "default" : "destructive"}>
-                        {vixData.condition_met ? "Favorable" : "Unfavorable"}
-                      </Badge>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                      <p className="text-sm text-slate-700">{vixData.message}</p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    Loading market data...
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-green-600" />
-                  Platform Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Connection</span>
-                  <Badge variant={webullStatus?.is_running ? "default" : "secondary"}>
-                    {webullStatus?.is_running ? "Connected" : "Disconnected"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Automation</span>
-                  <Badge variant={webullStatus?.has_automation ? "default" : "secondary"}>
-                    {webullStatus?.has_automation ? "Ready" : "Not Ready"}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Button 
-                    onClick={initializeWebull}
-                    disabled={loading || webullStatus?.is_running}
-                    className="w-full"
-                  >
-                    {webullStatus?.is_running ? "Already Connected" : "Initialize Connection"}
-                  </Button>
-                  <Button 
-                    onClick={testWebullLogin}
-                    disabled={loading || !webullStatus?.is_running}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Test Login
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="border-gray-300"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button 
+              variant="outline"
+              className="border-gray-300"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+          </div>
+        </div>
 
-          {/* Risk Overview */}
-          {showAdvanced && (
-            <Card>
+        {/* Key Metrics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total P&L</p>
+                  <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${totalPnL.toFixed(2)}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${totalPnL >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <DollarSign className={`w-6 h-6 ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Positions</p>
+                  <p className="text-2xl font-bold text-gray-900">{positions.length}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Win Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{winRate}%</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <Target className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">VIX Level</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {vixData?.price ? `${vixData.price}%` : '--'}
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <Activity className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="positions">Positions</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Market Conditions */}
+              <Card className="border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-blue-600" />
+                    Market Conditions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">VIX Level</span>
+                        <Badge variant={vixData?.price > 20 ? "default" : vixData?.price > 15 ? "secondary" : "destructive"}>
+                          {vixData?.price > 20 ? 'High Volatility' : 
+                           vixData?.price > 15 ? 'Moderate' : 
+                           vixData?.price ? 'Low Volatility' : 'Loading...'}
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {vixData?.price ? `${vixData.price}%` : 'Loading...'}
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {vixData?.change ? `${vixData.change >= 0 ? '+' : ''}${vixData.change.toFixed(2)}%` : 'No data'}
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={fetchVixData}
+                      disabled={loading}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh Market Data
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Platform Status */}
+              <Card className="border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {webullStatus?.is_running ? (
+                      <Wifi className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <WifiOff className="w-5 h-5 text-red-600" />
+                    )}
+                    Platform Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Connection</span>
+                      <Badge variant={webullStatus?.is_running ? "default" : "destructive"}>
+                        {webullStatus?.is_running ? 'Connected' : 'Disconnected'}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Automation</span>
+                      <Badge variant={webullStatus?.has_automation ? "default" : "secondary"}>
+                        {webullStatus?.has_automation ? 'Ready' : 'Not Available'}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Positions Count</span>
+                      <span className="font-medium">{webullStatus?.positions_count || 0}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={initializeWebull}
+                        disabled={loading}
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Initialize
+                      </Button>
+                      <Button 
+                        onClick={testWebullLogin}
+                        disabled={loading}
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Test Login
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Portfolio Performance */}
+            <Card className="border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  Risk Distribution
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  Portfolio Performance
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{riskLevels.low.length}</div>
-                    <div className="text-sm text-green-700">Low Risk (&lt;$50)</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-900">
+                      ${totalMaxProfit.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-gray-600">Max Profit Potential</div>
                   </div>
-                  <div className="text-center p-4 bg-amber-50 rounded-lg">
-                    <div className="text-2xl font-bold text-amber-600">{riskLevels.medium.length}</div>
-                    <div className="text-sm text-amber-700">Medium Risk ($50-100)</div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600">
+                      ${Math.abs(totalMaxLoss).toFixed(2)}
+                    </div>
+                    <div className="text-sm text-gray-600">Max Risk</div>
                   </div>
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">{riskLevels.high.length}</div>
-                    <div className="text-sm text-red-700">High Risk (&gt;$100)</div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {totalMaxLoss !== 0 ? (totalMaxProfit / Math.abs(totalMaxLoss)).toFixed(2) : '0.00'}:1
+                    </div>
+                    <div className="text-sm text-gray-600">Risk/Reward Ratio</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="positions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Active Positions</CardTitle>
-                <Button 
-                  onClick={() => { fetchPositions(); fetchWebullStatus(); }}
-                  disabled={loading}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {positions.length > 0 ? (
-                <div className="space-y-4">
-                  {positions.map((position) => (
-                    <div key={position.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-lg">{position.symbol} Iron Condor</h4>
-                          <p className="text-sm text-slate-600">
-                            Opened: {new Date(position.opened_at).toLocaleString()}
-                          </p>
+          {/* Positions Tab */}
+          <TabsContent value="positions" className="space-y-6">
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    Active Positions ({positions.length})
+                  </span>
+                  <Button 
+                    onClick={createDemoData}
+                    disabled={loading}
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Demo Positions
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {positions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">
+                      <BarChart3 className="w-16 h-16 mx-auto" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Positions</h3>
+                    <p className="text-gray-500 mb-4">Create your first Iron Condor position to get started</p>
+                    <Button onClick={createDemoData} disabled={loading}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Generate Demo Data
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {positions.map((position, index) => (
+                      <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Target className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{position.symbol || 'N/A'}</h3>
+                              <p className="text-sm text-gray-500">
+                                Iron Condor • {position.created_at ? new Date(position.created_at).toLocaleDateString() : 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-xl font-bold ${
+                              (position.current_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              ${(position.current_pnl || 0).toFixed(2)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {((position.current_pnl || 0) >= 0 ? '+' : '')}
+                              {(((position.current_pnl || 0) / (position.max_profit || 1)) * 100).toFixed(1)}%
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={position.status === 'open' ? "default" : "secondary"}>
-                            {position.status}
-                          </Badge>
-                          {position.status === 'open' && (
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Max Profit</span>
+                            <div className="font-medium">${(position.max_profit || 0).toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Max Loss</span>
+                            <div className="font-medium text-red-600">${Math.abs(position.max_loss || 0).toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Break Even</span>
+                            <div className="font-medium">${(position.break_even_lower || 0).toFixed(2)} - ${(position.break_even_upper || 0).toFixed(2)}</div>
+                          </div>
+                          <div className="flex items-center justify-end">
                             <Button 
                               onClick={() => closePosition(position.id)}
                               disabled={loading}
                               size="sm"
                               variant="outline"
                             >
-                              <X className="h-4 w-4" />
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Close
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                        <div>
-                          <p className="text-slate-600">Underlying</p>
-                          <p className="font-semibold">${position.underlying_price}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600">Premium</p>
-                          <p className="font-semibold text-green-600">${position.premium_collected}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600">Max Profit</p>
-                          <p className="font-semibold text-green-600">${position.max_profit}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600">Max Loss</p>
-                          <p className="font-semibold text-red-600">${position.max_loss}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600">DTE</p>
-                          <p className="font-semibold">{position.days_to_expiration}</p>
-                        </div>
-                      </div>
-
-                      {showAdvanced && (
-                        <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded">
-                          <div className="text-center">
-                            <p className="text-slate-600">Put Long</p>
-                            <p className="font-mono font-semibold">${position.strikes.put_long}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Put Short</p>
-                            <p className="font-mono font-semibold">${position.strikes.put_short}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Call Short</p>
-                            <p className="font-mono font-semibold">${position.strikes.call_short}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-slate-600">Call Long</p>
-                            <p className="font-mono font-semibold">${position.strikes.call_long}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-3 text-slate-400" />
-                  <p className="text-slate-600 mb-4">No active positions</p>
-                  <Button onClick={createDemoData} disabled={loading}>
-                    Create Demo Positions
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analysis" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-purple-600" />
-                  Performance Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-slate-600 text-sm">Total Premium Collected</p>
-                    <p className="text-xl font-bold text-green-600">${totalPremium.toFixed(2)}</p>
+                    ))}
                   </div>
-                  <div>
-                    <p className="text-slate-600 text-sm">Realized P&L</p>
-                    <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 text-sm">Win Rate</p>
-                    <p className="text-xl font-bold text-blue-600">{winRate.toFixed(1)}%</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 text-sm">Avg Position Size</p>
-                    <p className="text-xl font-bold text-purple-600">
-                      ${positions.length > 0 ? (totalPremium / positions.length).toFixed(0) : '0'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-indigo-600" />
-                  Strategy Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {positions.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Best Performer</span>
-                      <span className="font-semibold">
-                        {positions.reduce((best, pos) => 
-                          (pos.pnl || 0) > (best.pnl || 0) ? pos : best
-                        ).symbol}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Avg Days Held</span>
-                      <span className="font-semibold">
-                        {Math.round(positions.reduce((sum, pos) => sum + pos.days_to_expiration, 0) / positions.length)} days
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Risk/Reward Ratio</span>
-                      <span className="font-semibold">
-                        1:{totalPremium > 0 ? (Math.abs(totalPnL) / totalPremium).toFixed(1) : '0'}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-slate-500">No position data for analysis</p>
                 )}
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="trading" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-gray-200">
+                <CardHeader>
+                  <CardTitle>Performance Metrics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Total Trades</span>
+                      <span className="font-medium">{positions.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Winning Trades</span>
+                      <span className="font-medium text-green-600">{winningPositions}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Losing Trades</span>
+                      <span className="font-medium text-red-600">{positions.length - winningPositions}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Win Rate</span>
+                      <span className="font-medium">{winRate}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Average P&L</span>
+                      <span className="font-medium">
+                        ${positions.length > 0 ? (totalPnL / positions.length).toFixed(2) : '0.00'}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-gray-200">
+                <CardHeader>
+                  <CardTitle>Risk Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Total Risk</span>
+                      <span className="font-medium text-red-600">${Math.abs(totalMaxLoss).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Profit Potential</span>
+                      <span className="font-medium text-green-600">${totalMaxProfit.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Risk/Reward</span>
+                      <span className="font-medium">
+                        {totalMaxLoss !== 0 ? (totalMaxProfit / Math.abs(totalMaxLoss)).toFixed(2) : '0.00'}:1
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Portfolio Beta</span>
+                      <span className="font-medium">N/A</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Trading Tab */}
+          <TabsContent value="trading" className="space-y-6">
+            <Card className="border-gray-200">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-green-600" />
+                  <Plus className="w-5 h-5 text-blue-600" />
                   Create New Position
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="symbol">Stock Symbol</Label>
-                  <Input
-                    id="symbol"
-                    value={newSymbol}
-                    onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                    placeholder="SPY, QQQ, AAPL, etc."
-                    className="mt-1"
-                  />
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter symbol (e.g., SPY, QQQ, IWM)"
+                      value={newSymbol}
+                      onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+                      className="w-60"
+                    />
+                    <Button 
+                      onClick={() => createPosition(newSymbol)}
+                      disabled={loading || !newSymbol}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {loading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="w-4 h-4 mr-2" />
+                      )}
+                      Create Iron Condor
+                    </Button>
+                  </div>
                 </div>
-                <Button 
-                  onClick={createPosition}
-                  disabled={loading || !webullStatus?.is_running || !newSymbol}
-                  className="w-full"
-                >
-                  Create Iron Condor
-                </Button>
-                {!webullStatus?.is_running && (
-                  <p className="text-sm text-amber-600">
-                    Initialize Webull connection first
-                  </p>
-                )}
+                
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
+                    onClick={createDemoData}
+                    disabled={loading}
+                    variant="outline"
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Target className="w-4 h-4" />
+                    Generate Demo Data
+                  </Button>
+                  
+                  <Button 
+                    onClick={fetchPositions}
+                    disabled={loading}
+                    variant="outline"
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh Positions
+                  </Button>
+                  
+                  <Button 
+                    onClick={resetData}
+                    disabled={loading}
+                    variant="outline"
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Reset All Data
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-slate-600" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  onClick={createDemoData}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Create Demo Data
-                </Button>
-                <Button 
-                  onClick={() => { fetchVixData(); fetchWebullStatus(); fetchPositions(); }}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh All Data
-                </Button>
-                <Button 
-                  onClick={resetData}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full border-red-300 text-red-700 hover:bg-red-50"
-                >
-                  Reset All Data
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

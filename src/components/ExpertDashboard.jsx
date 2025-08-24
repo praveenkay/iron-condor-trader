@@ -4,680 +4,613 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
 import { Input } from '@/components/ui/input.jsx'
-import { Label } from '@/components/ui/label.jsx'
-import { Switch } from '@/components/ui/switch.jsx'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { 
-  Settings, 
-  BarChart3, 
-  Target,
+  ArrowLeft,
+  TrendingUp, 
+  DollarSign, 
   Activity,
-  TrendingUp,
-  AlertTriangle,
-  RefreshCw,
+  BarChart3,
+  Settings,
+  Wifi,
+  WifiOff,
   Plus,
-  X,
-  Calculator,
-  Code,
-  Database,
-  Zap,
-  Filter,
+  Trash2,
+  RefreshCw,
+  Target,
   Download,
   Upload,
-  Bell,
-  Maximize2
+  Filter,
+  SortAsc,
+  SortDesc,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  TrendingDown,
+  Zap,
+  Database,
+  Terminal
 } from 'lucide-react'
 
 const ExpertDashboard = ({ 
-  onBack,
-  vixData,
-  webullStatus,
-  positions,
+  onBack, 
+  vixData, 
+  webullStatus, 
+  positions, 
   loading,
   initializeWebull,
   testWebullLogin,
+  createDemoData,
   createPosition,
   closePosition,
-  createDemoData,
-  resetData,
+  newSymbol,
+  setNewSymbol,
+  showMessage,
   fetchVixData,
   fetchWebullStatus,
   fetchPositions,
-  newSymbol,
-  setNewSymbol,
-  showMessage
+  resetData
 }) => {
+  const [activeTab, setActiveTab] = useState('overview')
   const [autoRefresh, setAutoRefresh] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState(30)
-  const [selectedPositions, setSelectedPositions] = useState(new Set())
-  const [sortBy, setSortBy] = useState('opened_at')
-  const [filterBy, setFilterBy] = useState('all')
-  const [showAdvancedMetrics, setShowAdvancedMetrics] = useState(true)
-  const [customSymbol, setCustomSymbol] = useState('')
-  const [batchSize, setBatchSize] = useState(1)
+  const [filterSymbol, setFilterSymbol] = useState('')
+  const [sortBy, setSortBy] = useState('date')
+  const [sortOrder, setSortOrder] = useState('desc')
 
-  // Advanced calculations
-  const portfolioMetrics = {
-    totalPnL: positions.reduce((sum, pos) => sum + (pos.pnl || 0), 0),
-    totalPremium: positions.reduce((sum, pos) => sum + (pos.premium_collected || 0), 0),
-    totalRisk: positions.reduce((sum, pos) => sum + (pos.max_loss || 0), 0),
-    winRate: positions.length > 0 ? (positions.filter(p => (p.pnl || 0) > 0).length / positions.length * 100) : 0,
-    avgDTE: positions.length > 0 ? positions.reduce((sum, pos) => sum + pos.days_to_expiration, 0) / positions.length : 0,
-    sharpeRatio: 0, // Simplified - would need historical data
-    maxDrawdown: 0 // Simplified - would need historical data
-  }
-
-  portfolioMetrics.returnOnRisk = portfolioMetrics.totalRisk > 0 ? (portfolioMetrics.totalPnL / portfolioMetrics.totalRisk * 100) : 0
-  portfolioMetrics.profitFactor = positions.length > 0 ? 
-    Math.abs(positions.filter(p => (p.pnl || 0) > 0).reduce((sum, p) => sum + p.pnl, 0) / 
-    Math.max(Math.abs(positions.filter(p => (p.pnl || 0) < 0).reduce((sum, p) => sum + p.pnl, 0)), 1)) : 0
-
-  // Auto refresh effect
+  // Auto-refresh functionality
   useEffect(() => {
+    let interval
     if (autoRefresh) {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         fetchVixData()
         fetchWebullStatus()
         fetchPositions()
-      }, refreshInterval * 1000)
-      return () => clearInterval(interval)
+      }, 30000) // 30 seconds
     }
-  }, [autoRefresh, refreshInterval])
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [autoRefresh])
 
-  // Position filtering and sorting
+  // Calculate advanced metrics
+  const totalPnL = positions.reduce((sum, pos) => sum + (pos.current_pnl || 0), 0)
+  const totalMaxProfit = positions.reduce((sum, pos) => sum + (pos.max_profit || 0), 0)
+  const totalMaxLoss = positions.reduce((sum, pos) => sum + (pos.max_loss || 0), 0)
+  const winningPositions = positions.filter(pos => (pos.current_pnl || 0) > 0).length
+  const winRate = positions.length > 0 ? (winningPositions / positions.length * 100).toFixed(1) : '0'
+  const avgPnL = positions.length > 0 ? (totalPnL / positions.length) : 0
+  const profitFactor = positions.length > 0 ? 
+    (positions.filter(p => (p.current_pnl || 0) > 0).reduce((sum, p) => sum + p.current_pnl, 0) /
+     Math.abs(positions.filter(p => (p.current_pnl || 0) < 0).reduce((sum, p) => sum + p.current_pnl, 0))) || 0 : 0
+
+  // Filter and sort positions
   const filteredPositions = positions
-    .filter(pos => {
-      switch (filterBy) {
-        case 'profitable': return (pos.pnl || 0) > 0
-        case 'losing': return (pos.pnl || 0) < 0
-        case 'high-risk': return (pos.max_loss || 0) > 100
-        case 'expiring-soon': return pos.days_to_expiration < 10
-        default: return true
-      }
-    })
+    .filter(pos => !filterSymbol || (pos.symbol && pos.symbol.toLowerCase().includes(filterSymbol.toLowerCase())))
     .sort((a, b) => {
+      const multiplier = sortOrder === 'asc' ? 1 : -1
       switch (sortBy) {
-        case 'pnl': return (b.pnl || 0) - (a.pnl || 0)
-        case 'risk': return (b.max_loss || 0) - (a.max_loss || 0)
-        case 'premium': return (b.premium_collected || 0) - (a.premium_collected || 0)
-        case 'dte': return a.days_to_expiration - b.days_to_expiration
-        default: return new Date(b.opened_at) - new Date(a.opened_at)
+        case 'symbol':
+          return multiplier * ((a.symbol || '').localeCompare(b.symbol || ''))
+        case 'pnl':
+          return multiplier * ((a.current_pnl || 0) - (b.current_pnl || 0))
+        case 'date':
+        default:
+          return multiplier * (new Date(b.created_at || 0) - new Date(a.created_at || 0))
       }
     })
 
-  const handleBulkClose = async () => {
-    if (selectedPositions.size === 0) return
-    
-    for (const positionId of selectedPositions) {
-      await closePosition(positionId)
+  const bulkClosePositions = async (positionIds) => {
+    for (const id of positionIds) {
+      await closePosition(id)
     }
-    setSelectedPositions(new Set())
-    showMessage(`Closed ${selectedPositions.size} positions`)
-  }
-
-  const handleBulkCreate = async () => {
-    const symbols = customSymbol.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
-    if (symbols.length === 0) return
-
-    for (let i = 0; i < batchSize; i++) {
-      for (const symbol of symbols) {
-        await createPosition(symbol)
-      }
-    }
-    showMessage(`Created ${symbols.length * batchSize} positions`)
-    setCustomSymbol('')
-  }
-
-  const exportData = () => {
-    const data = {
-      positions,
-      metrics: portfolioMetrics,
-      timestamp: new Date().toISOString()
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `iron-condor-data-${new Date().toISOString().split('T')[0]}.json`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
-    <div className="space-y-4">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Expert Dashboard</h1>
-          <p className="text-slate-600">Advanced trading interface with full control</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onBack}>
-            Change Level
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportData}>
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Control Panel */}
-      <Card className="bg-slate-50">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch 
-                checked={autoRefresh}
-                onCheckedChange={setAutoRefresh}
-              />
-              <Label className="text-sm">Auto-refresh</Label>
-              {autoRefresh && (
-                <Input
-                  type="number"
-                  value={refreshInterval}
-                  onChange={(e) => setRefreshInterval(Number(e.target.value))}
-                  className="w-16 h-8 text-xs"
-                  min={5}
-                  max={300}
-                />
-              )}
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-semibold text-gray-900">Expert Dashboard</h1>
+              <p className="text-gray-600">Advanced trading interface with full control</p>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Filter:</Label>
-              <select 
-                value={filterBy} 
-                onChange={(e) => setFilterBy(e.target.value)}
-                className="text-sm border rounded px-2 py-1"
-              >
-                <option value="all">All</option>
-                <option value="profitable">Profitable</option>
-                <option value="losing">Losing</option>
-                <option value="high-risk">High Risk</option>
-                <option value="expiring-soon">Expiring Soon</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">Sort:</Label>
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)}
-                className="text-sm border rounded px-2 py-1"
-              >
-                <option value="opened_at">Date</option>
-                <option value="pnl">P&L</option>
-                <option value="risk">Risk</option>
-                <option value="premium">Premium</option>
-                <option value="dte">DTE</option>
-              </select>
-            </div>
-
+          </div>
+          <div className="flex items-center gap-2">
             <Button 
-              onClick={() => { fetchVixData(); fetchWebullStatus(); fetchPositions(); }}
-              disabled={loading}
+              variant={autoRefresh ? "default" : "outline"}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              size="sm"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Auto-refresh
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+              size="sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+            <Button 
               variant="outline"
               size="sm"
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
+              <Download className="w-4 h-4 mr-2" />
+              Export
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 text-xs">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="positions">Positions</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="trading">Trading</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
-        </TabsList>
+        {/* Advanced Metrics Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">P&L</div>
+            <div className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${totalPnL.toFixed(2)}
+            </div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">Positions</div>
+            <div className="text-xl font-bold">{positions.length}</div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">Win Rate</div>
+            <div className="text-xl font-bold">{winRate}%</div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">Premium</div>
+            <div className="text-xl font-bold">${totalMaxProfit.toFixed(0)}</div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">Risk</div>
+            <div className="text-xl font-bold">${Math.abs(totalMaxLoss).toFixed(0)}</div>
+          </Card>
+          
+          <Card className="p-4">
+            <div className="text-sm text-gray-600">VIX</div>
+            <div className="text-xl font-bold">{vixData?.price || '--'}</div>
+          </Card>
+        </div>
 
-        <TabsContent value="overview" className="space-y-4">
-          {/* Compact Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">P&L</div>
-              <div className={`text-lg font-bold ${portfolioMetrics.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {portfolioMetrics.totalPnL >= 0 ? '+' : ''}${portfolioMetrics.totalPnL.toFixed(0)}
-              </div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">Positions</div>
-              <div className="text-lg font-bold">{positions.length}</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">Win Rate</div>
-              <div className="text-lg font-bold text-blue-600">{portfolioMetrics.winRate.toFixed(0)}%</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">Premium</div>
-              <div className="text-lg font-bold text-green-600">${portfolioMetrics.totalPremium.toFixed(0)}</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">Risk</div>
-              <div className="text-lg font-bold text-red-600">${portfolioMetrics.totalRisk.toFixed(0)}</div>
-            </Card>
-            <Card className="p-3">
-              <div className="text-xs text-slate-600">VIX</div>
-              <div className="text-lg font-bold text-amber-600">{vixData?.vix || '--'}</div>
-            </Card>
-          </div>
+        {/* Advanced Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="positions">Positions</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="trading">Trading</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
+          </TabsList>
 
-          {/* Advanced Metrics */}
-          {showAdvancedMetrics && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="p-3">
-                <div className="text-xs text-slate-600">Return on Risk</div>
-                <div className="text-sm font-bold">{portfolioMetrics.returnOnRisk.toFixed(1)}%</div>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Performance Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Performance</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Return on Risk</span>
+                    <span className="font-medium">
+                      {totalMaxLoss !== 0 ? ((totalPnL / Math.abs(totalMaxLoss)) * 100).toFixed(1) : '0.0'}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Profit Factor</span>
+                    <span className="font-medium">{profitFactor.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Avg DTE</span>
+                    <span className="font-medium">30 days</span>
+                  </div>
+                </CardContent>
               </Card>
-              <Card className="p-3">
-                <div className="text-xs text-slate-600">Profit Factor</div>
-                <div className="text-sm font-bold">{portfolioMetrics.profitFactor.toFixed(2)}</div>
+
+              {/* Market Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Market Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Connection</span>
+                    <Badge variant={webullStatus?.is_running ? "default" : "destructive"}>
+                      {webullStatus?.is_running ? 'Live' : 'Disconnected'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Market Status</span>
+                    <Badge variant="secondary">
+                      {new Date().getHours() >= 9 && new Date().getHours() < 16 ? 'Open' : 'Closed'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">VIX Level</span>
+                    <span className="font-medium">{vixData?.price || 'Loading...'}</span>
+                  </div>
+                </CardContent>
               </Card>
-              <Card className="p-3">
-                <div className="text-xs text-slate-600">Avg DTE</div>
-                <div className="text-sm font-bold">{portfolioMetrics.avgDTE.toFixed(0)} days</div>
-              </Card>
-              <Card className="p-3">
-                <div className="text-xs text-slate-600">Connection</div>
-                <Badge variant={webullStatus?.is_running ? "default" : "secondary"} className="text-xs">
-                  {webullStatus?.is_running ? "Live" : "Offline"}
-                </Badge>
+
+              {/* Risk Metrics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Risk Analysis</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Platform</span>
+                    <Badge variant={webullStatus?.is_running ? "default" : "destructive"}>
+                      {webullStatus?.is_running ? 'Connected' : 'Offline'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Last Update</span>
+                    <span className="font-medium text-sm">
+                      {webullStatus?.last_initialized_at ? 
+                        new Date(webullStatus.last_initialized_at).toLocaleTimeString() : '--'}
+                    </span>
+                  </div>
+                </CardContent>
               </Card>
             </div>
-          )}
+          </TabsContent>
 
-          {/* Market Status */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>Market Status</span>
-                <Badge variant={vixData?.condition_met ? "default" : "secondary"}>
-                  {vixData?.condition_met ? "Favorable" : "Unfavorable"}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-600">VIX Level:</span>
-                  <span className="font-semibold ml-2">{vixData?.vix || 'Loading...'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600">Market:</span>
-                  <span className="font-semibold ml-2">{vixData?.market_open ? 'Open' : 'Closed'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600">Platform:</span>
-                  <span className="font-semibold ml-2">{webullStatus?.is_running ? 'Connected' : 'Disconnected'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600">Last Update:</span>
-                  <span className="font-semibold ml-2">{vixData ? new Date(vixData.timestamp).toLocaleTimeString() : '--'}</span>
-                </div>
+          {/* Positions Tab */}
+          <TabsContent value="positions" className="space-y-6">
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="Filter by symbol..."
+                  value={filterSymbol}
+                  onChange={(e) => setFilterSymbol(e.target.value)}
+                  className="w-40"
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="symbol">Symbol</SelectItem>
+                  <SelectItem value="pnl">P&L</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+              </Button>
 
-        <TabsContent value="positions" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                  Active Positions ({filteredPositions.length})
-                </CardTitle>
-                <div className="flex gap-2">
-                  {selectedPositions.size > 0 && (
-                    <Button 
-                      onClick={handleBulkClose}
-                      disabled={loading}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      Close Selected ({selectedPositions.size})
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={() => setSelectedPositions(new Set(positions.map(p => p.id)))}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Select All
-                  </Button>
-                </div>
+              <div className="ml-auto flex gap-2">
+                <Button 
+                  onClick={() => bulkClosePositions(filteredPositions.map(p => p.id))}
+                  disabled={loading || filteredPositions.length === 0}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Close All ({filteredPositions.length})
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {filteredPositions.length > 0 ? (
-                <div className="space-y-2">
-                  {filteredPositions.map((position) => (
-                    <div 
-                      key={position.id} 
-                      className={`border rounded p-3 transition-colors ${
-                        selectedPositions.has(position.id) ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedPositions.has(position.id)}
-                            onChange={(e) => {
-                              const newSelected = new Set(selectedPositions)
-                              if (e.target.checked) {
-                                newSelected.add(position.id)
-                              } else {
-                                newSelected.delete(position.id)
-                              }
-                              setSelectedPositions(newSelected)
-                            }}
-                            className="rounded"
-                          />
-                          <div>
-                            <div className="font-semibold">{position.symbol}</div>
-                            <div className="text-xs text-slate-600">
-                              {new Date(position.opened_at).toLocaleDateString()} • {position.days_to_expiration}d
+            </div>
+
+            {/* Positions List */}
+            <Card>
+              <CardContent className="p-0">
+                {filteredPositions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BarChart3 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Positions Found</h3>
+                    <p className="text-gray-500">
+                      {positions.length === 0 ? 'Create positions to get started' : 'No positions match your filter'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {filteredPositions.map((position, index) => (
+                      <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-3 h-3 rounded-full ${
+                              (position.current_pnl || 0) >= 0 ? 'bg-green-500' : 'bg-red-500'
+                            }`} />
+                            <div>
+                              <div className="font-semibold text-gray-900">{position.symbol || 'N/A'}</div>
+                              <div className="text-sm text-gray-500">
+                                {position.created_at ? new Date(position.created_at).toLocaleDateString() : 'N/A'}
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-6 text-sm">
-                          <div className="text-center">
-                            <div className="text-xs text-slate-600">P&L</div>
-                            <div className={`font-semibold ${(position.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              ${(position.pnl || 0).toFixed(0)}
+                          
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500">Max Profit</div>
+                              <div className="font-medium">${(position.max_profit || 0).toFixed(2)}</div>
                             </div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-slate-600">Premium</div>
-                            <div className="font-semibold text-green-600">${position.premium_collected}</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-xs text-slate-600">Risk</div>
-                            <div className="font-semibold text-red-600">${position.max_loss}</div>
-                          </div>
-                          <div className="text-center">
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500">Max Loss</div>
+                              <div className="font-medium text-red-600">${Math.abs(position.max_loss || 0).toFixed(2)}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500">Current P&L</div>
+                              <div className={`text-lg font-bold ${
+                                (position.current_pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                ${(position.current_pnl || 0).toFixed(2)}
+                              </div>
+                            </div>
                             <Button 
                               onClick={() => closePosition(position.id)}
                               disabled={loading}
-                              variant="outline"
                               size="sm"
+                              variant="outline"
                             >
-                              <X className="h-3 w-3" />
+                              Close
                             </Button>
                           </div>
                         </div>
                       </div>
-
-                      {/* Strike Details */}
-                      <div className="grid grid-cols-4 gap-1 text-xs mt-2 p-2 bg-slate-50 rounded">
-                        <div className="text-center">
-                          <div className="text-slate-600">Put L</div>
-                          <div className="font-mono">{position.strikes.put_long}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-slate-600">Put S</div>
-                          <div className="font-mono">{position.strikes.put_short}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-slate-600">Call S</div>
-                          <div className="font-mono">{position.strikes.call_short}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-slate-600">Call L</div>
-                          <div className="font-mono">{position.strikes.call_long}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No positions match current filters
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Portfolio Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-slate-600">Total Return</div>
-                    <div className={`text-lg font-bold ${portfolioMetrics.totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {portfolioMetrics.totalPnL >= 0 ? '+' : ''}${portfolioMetrics.totalPnL.toFixed(2)}
-                    </div>
+                    ))}
                   </div>
-                  <div>
-                    <div className="text-xs text-slate-600">Return %</div>
-                    <div className={`text-lg font-bold ${portfolioMetrics.returnOnRisk >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {portfolioMetrics.returnOnRisk >= 0 ? '+' : ''}{portfolioMetrics.returnOnRisk.toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Win Rate:</span>
-                    <span className="font-semibold">{portfolioMetrics.winRate.toFixed(1)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Profit Factor:</span>
-                    <span className="font-semibold">{portfolioMetrics.profitFactor.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Avg DTE:</span>
-                    <span className="font-semibold">{portfolioMetrics.avgDTE.toFixed(0)} days</span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Risk Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span>Total Risk Exposure:</span>
-                    <span className="font-semibold text-red-600">${portfolioMetrics.totalRisk.toFixed(0)}</span>
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance Analytics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-gray-50 rounded">
+                      <div className="text-2xl font-bold">{positions.length}</div>
+                      <div className="text-sm text-gray-600">Total Trades</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded">
+                      <div className="text-2xl font-bold text-green-600">{winningPositions}</div>
+                      <div className="text-sm text-gray-600">Winners</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded">
+                      <div className="text-2xl font-bold">{winRate}%</div>
+                      <div className="text-sm text-gray-600">Win Rate</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded">
+                      <div className="text-2xl font-bold">{profitFactor.toFixed(2)}</div>
+                      <div className="text-sm text-gray-600">Profit Factor</div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Premium at Risk:</span>
-                    <span className="font-semibold">{portfolioMetrics.totalRisk > 0 ? (portfolioMetrics.totalPremium / portfolioMetrics.totalRisk * 100).toFixed(1) : 0}%</span>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Metrics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">API Latency</span>
+                    <span className="font-medium">~150ms</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Largest Single Risk:</span>
-                    <span className="font-semibold">
-                      ${positions.length > 0 ? Math.max(...positions.map(p => p.max_loss || 0)).toFixed(0) : '0'}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Data Refresh Rate</span>
+                    <span className="font-medium">
+                      {autoRefresh ? '30s' : 'Manual'}
                     </span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Last Sync</span>
+                    <span className="font-medium text-sm">
+                      {new Date().toLocaleTimeString()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="trading" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Trade</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label htmlFor="single-symbol" className="text-sm">Single Symbol</Label>
-                  <div className="flex gap-2 mt-1">
+          {/* Trading Tab */}
+          <TabsContent value="trading" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Trade</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
                     <Input
-                      id="single-symbol"
+                      placeholder="Symbol (e.g., SPY)"
                       value={newSymbol}
                       onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                      placeholder="SPY"
                       className="flex-1"
                     />
                     <Button 
-                      onClick={() => createPosition()}
-                      disabled={loading || !webullStatus?.is_running || !newSymbol}
+                      onClick={() => createPosition(newSymbol)}
+                      disabled={loading || !newSymbol}
                     >
                       Create
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      onClick={createDemoData}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Demo Data
+                    </Button>
+                    <Button 
+                      onClick={resetData}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Reset All
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Batch Trading</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-sm">Multiple Symbols (comma-separated)</Label>
-                  <Input
-                    value={customSymbol}
-                    onChange={(e) => setCustomSymbol(e.target.value)}
-                    placeholder="SPY,QQQ,IWM"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Quantity per symbol:</Label>
-                  <Input
-                    type="number"
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Math.max(1, Number(e.target.value)))}
-                    className="w-20"
-                    min={1}
-                    max={10}
-                  />
-                </div>
-                <Button 
-                  onClick={handleBulkCreate}
-                  disabled={loading || !webullStatus?.is_running || !customSymbol}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Batch Create
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Batch Operations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button 
+                    onClick={() => bulkClosePositions(positions.map(p => p.id))}
+                    disabled={loading || positions.length === 0}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Close All Positions ({positions.length})
+                  </Button>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      onClick={fetchPositions}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Button onClick={createDemoData} disabled={loading} variant="outline">
-                  Demo Data
-                </Button>
-                <Button onClick={initializeWebull} disabled={loading || webullStatus?.is_running} variant="outline">
-                  Initialize
-                </Button>
-                <Button onClick={testWebullLogin} disabled={loading || !webullStatus?.is_running} variant="outline">
-                  Test Login
-                </Button>
-                <Button onClick={resetData} disabled={loading} variant="outline" className="text-red-600">
-                  Reset All
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* System Tab */}
+          <TabsContent value="system" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Terminal className="w-5 h-5" />
+                    System Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Platform Connection</span>
+                    <Badge variant={webullStatus?.is_running ? "default" : "destructive"}>
+                      {webullStatus?.is_running ? 'Connected' : 'Disconnected'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Automation Status</span>
+                    <Badge variant={webullStatus?.has_automation ? "default" : "secondary"}>
+                      {webullStatus?.has_automation ? 'Ready' : 'Not Available'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Data Mode</span>
+                    <Badge variant="secondary">Mock API</Badge>
+                  </div>
+                  
+                  <div className="pt-4 border-t space-y-2">
+                    <Button 
+                      onClick={initializeWebull}
+                      disabled={loading}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Wifi className="w-4 h-4 mr-2" />
+                      Initialize Platform
+                    </Button>
+                    <Button 
+                      onClick={testWebullLogin}
+                      disabled={loading}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Test Connection
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-        <TabsContent value="system" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  System Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span>API Status:</span>
-                  <Badge variant="default">Mock API Active</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Webull Connection:</span>
-                  <Badge variant={webullStatus?.is_running ? "default" : "secondary"}>
-                    {webullStatus?.is_running ? "Connected" : "Disconnected"}
-                  </Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Data Persistence:</span>
-                  <Badge variant="default">Local Storage</Badge>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Auto Refresh:</span>
-                  <Badge variant={autoRefresh ? "default" : "secondary"}>
-                    {autoRefresh ? `${refreshInterval}s` : "Disabled"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Data Management</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button onClick={exportData} variant="outline" className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Portfolio Data
-                </Button>
-                <Button 
-                  onClick={() => {
-                    const input = document.createElement('input')
-                    input.type = 'file'
-                    input.accept = '.json'
-                    input.onchange = (e) => {
-                      const file = e.target.files[0]
-                      if (file) {
-                        const reader = new FileReader()
-                        reader.onload = (e) => {
-                          try {
-                            const data = JSON.parse(e.target.result)
-                            showMessage('Import functionality would be implemented here')
-                          } catch (err) {
-                            showMessage('Invalid file format', true)
-                          }
-                        }
-                        reader.readAsText(file)
-                      }
-                    }
-                    input.click()
-                  }}
-                  variant="outline" 
-                  className="w-full"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import Portfolio Data
-                </Button>
-                <Button 
-                  onClick={() => localStorage.clear()}
-                  variant="outline"
-                  className="w-full text-red-600"
-                >
-                  Clear All Local Data
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="w-5 h-5" />
+                    Data Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Positions Loaded</span>
+                    <span className="font-medium">{positions.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Market Data</span>
+                    <Badge variant={vixData ? "default" : "secondary"}>
+                      {vixData ? 'Current' : 'Stale'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Auto Refresh</span>
+                    <Badge variant={autoRefresh ? "default" : "secondary"}>
+                      {autoRefresh ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="pt-4 border-t space-y-2">
+                    <Button 
+                      onClick={() => {
+                        fetchVixData()
+                        fetchWebullStatus()
+                        fetchPositions()
+                      }}
+                      disabled={loading}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh All Data
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
